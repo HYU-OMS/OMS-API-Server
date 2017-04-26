@@ -1,5 +1,5 @@
-from flask_restful import Resource, reqparse
-from flask import request, abort
+from flask_restful import Resource
+from flask import request
 from app import db_engine
 from sqlalchemy import text
 from datetime import datetime
@@ -16,14 +16,9 @@ class Group(Resource):
         if self.user_info is None:
             return {"message": "JWT must be provided!"}, 401
 
-        parser = reqparse.RequestParser()
-        if 'page' in request.args:
-            parser.add_argument('page', type=int)
-        args = parser.parse_args(strict=False)
-
         page = 1
-        if 'page' in args and args['page'] is not None:
-            page = int(args['page'])
+        if 'page' in request.args:
+            page = int(request.args['page'])
 
         with db_engine.connect() as connection:
             fetch_query = " SELECT `groups`.`id`, `groups`.`name`, `groups`.`creator_id`, `groups`.`created_at` " \
@@ -57,7 +52,6 @@ class Group(Resource):
         if 'name' not in body:
             return {"message": "'name' not provided!"}, 400
 
-        new_group_id = None
         with db_engine.connect() as connection:
             with connection.begin() as transaction:
                 query_str = "INSERT INTO `groups` SET `name` = :name, `creator_id` = :user_id, " \

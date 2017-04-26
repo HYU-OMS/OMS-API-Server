@@ -1,4 +1,4 @@
-from flask_restful import Resource, reqparse
+from flask_restful import Resource
 from flask import request
 from app import app, db_engine
 from sqlalchemy import text
@@ -10,15 +10,14 @@ from passlib.hash import pbkdf2_sha256
 
 class User(Resource):
     def post(self):
-        parser = reqparse.RequestParser()
-        parser.add_argument('type', type=str)
-        args = parser.parse_args()
+        if 'type' not in request.args:
+            return {"message": "Argument 'type' must be provided!"}, 400
 
         body = request.get_json(silent=True, force=True)
         if body is None:
             return {"message": "Unable to get json post data!"}, 400
 
-        if args['type'] == 'signup':
+        if request.args['type'] == 'signup':
             if 'name' not in body:
                 return {"message": "'name' not provided!"}, 400
 
@@ -45,7 +44,7 @@ class User(Resource):
 
             return {"user_id": int(query.lastrowid)}, 200
 
-        elif args['type'] == 'signin':
+        elif request.args['type'] == 'signin':
             if 'email' not in body:
                 return {"message": "'email' not provided!"}, 400
 

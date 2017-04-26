@@ -22,6 +22,8 @@ app.before_request(helper.before_request)
 
 from app.resources.user import User
 from app.resources.group import Group
+from app.resources.member import Member
 
 api.add_resource(User, '/api/user')
 api.add_resource(Group, '/api/group')
+api.add_resource(Member, '/api/member')
