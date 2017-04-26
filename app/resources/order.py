@@ -185,6 +185,10 @@ class Order(Resource):
                     query = connection.execute(text(query_str), order_id=new_order_id, setmenu_id=content['id'],
                                                amount=content['amount'], cur_time=datetime.utcnow())
 
+                query_str = "UPDATE `order_transactions` SET `group_id` = :group_id, `table_id` = :table_id " \
+                            "WHERE `order_id` = :order_id"
+                query = connection.execute(text(query_str), group_id=group_id, table_id=table_id, order_id=new_order_id)
+
         return {"order_id": new_order_id}, 200
 
 

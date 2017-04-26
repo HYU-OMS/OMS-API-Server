@@ -25,6 +25,7 @@ from app.resources.member import Member
 from app.resources.menu import Menu, MenuEdit
 from app.resources.setmenu import Setmenu, SetmenuEdit
 from app.resources.order import Order, OrderEach
+from app.resources.queue import Queue
 
 api.add_resource(User, '/api/user')
 api.add_resource(Group, '/api/group')
@@ -35,3 +36,4 @@ api.add_resource(Setmenu, '/api/setmenu')
 api.add_resource(SetmenuEdit, '/api/setmenu/<int:setmenu_id>')
 api.add_resource(Order, '/api/order')
 api.add_resource(OrderEach, '/api/order/<int:order_id>')
+api.add_resource(Queue, '/api/queue')
