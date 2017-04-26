@@ -121,17 +121,17 @@ class Order(Resource):
                     "is_enabled": content['is_enabled']
                 }
 
-            for order_menu_info in menu_list:
-                if 'id' not in order_menu_info or 'amount' not in order_menu_info:
+            for menu_info in menu_list:
+                if 'id' not in menu_info or 'amount' not in menu_info:
                     return {"message": "Array 'menu_list' has been malformed!"}, 400
 
-                if str(order_menu_info['id']) not in group_menus:
-                    return {"message": "MenuID " + order_menu_info['id'] + " not belongs to this group!"}, 400
+                if menu_info['id'] not in group_menus:
+                    return {"message": "MenuID " + str(menu_info['id']) + " not belongs to this group!"}, 400
 
-                if int(group_menus[order_menu_info['id']]['is_enabled']) == 0:
-                    return {"message": str(group_menus[order_menu_info['id']]['name']) + " has been disabled!"}, 403
+                if int(group_menus[menu_info['id']]['is_enabled']) == 0:
+                    return {"message": str(group_menus[menu_info['id']]['name']) + " has been disabled!"}, 403
 
-                total_price += (int(order_menu_info['amount']) * int(group_menus[order_menu_info['id']]['price']))
+                total_price += (int(menu_info['amount']) * int(group_menus[menu_info['id']]['price']))
 
             query_str = "SELECT `id`, `name`, `price`, `is_enabled` FROM `setmenus` WHERE `group_id` = :group_id"
             query = connection.execute(text(query_str), group_id=group_id)
@@ -146,17 +146,17 @@ class Order(Resource):
                     "is_enabled": content['is_enabled']
                 }
 
-            for order_setmenu_info in setmenu_list:
-                if 'id' not in order_setmenu_info or 'amount' not in order_setmenu_info:
+            for setmenu_info in setmenu_list:
+                if 'id' not in setmenu_info or 'amount' not in setmenu_info:
                     return {"message": "Array 'setmenu_list' has been malformed!"}, 400
 
-                if str(order_setmenu_info['id']) not in group_menus:
-                    return {"message": "SetMenuID " + order_setmenu_info['id'] + " not belongs to this group!"}, 400
+                if setmenu_info['id'] not in group_setmenus:
+                    return {"message": "SetMenuID " + str(setmenu_info['id']) + " not belongs to this group!"}, 400
 
-                if int(group_menus[order_setmenu_info['id']]['is_enabled']) == 0:
-                    return {"message": str(group_menus[order_setmenu_info['id']]['name']) + " has been disabled!"}, 403
+                if int(group_menus[setmenu_info['id']]['is_enabled']) == 0:
+                    return {"message": str(group_setmenus[setmenu_info['id']]['name']) + " has been disabled!"}, 403
 
-                total_price += (int(order_setmenu_info['amount']) * int(group_menus[order_setmenu_info['id']]['price']))
+                total_price += (int(setmenu_info['amount']) * int(group_setmenus[setmenu_info['id']]['price']))
 
             with connection.begin() as transaction:
                 query_str = "INSERT INTO `orders` SET `user_id` = :user_id, `group_id` = :group_id, " \
@@ -243,4 +243,4 @@ class OrderEach(Resource):
                 query = connection.execute(text(query_str), is_approved=is_approved,
                                            cur_time=datetime.utcnow(), order_id=order_id)
 
-        return {"order_id": order_id}, 200
+        return {"order_id": order_id, "is_approved": is_approved}, 200

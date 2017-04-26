@@ -68,6 +68,9 @@ class Setmenu(Resource):
         price = int(body['price'])
         menu_list = body['menu_list']
 
+        if len(menu_list) == 0:
+            return {"message": "'menu_list' array is empty!"}, 400
+
         with db_engine.connect() as connection:
             query_str = "SELECT * FROM `members` WHERE `group_id` = :group_id AND `user_id` = :user_id"
             chk_permission = connection.execute(text(query_str),
@@ -78,7 +81,7 @@ class Setmenu(Resource):
 
             for menu_id in menu_list:
                 query_str = "SELECT * FROM `menus` WHERE `id` = :menu_id AND `group_id` = :group_id"
-                menu_check = connection.execute(text(query_str), menu_id=menu_id, group_id=group_id)
+                menu_check = connection.execute(text(query_str), menu_id=menu_id, group_id=group_id).first()
 
                 if menu_check is None:
                     return {"message": "Invalid 'menu_id' for this group!"}, 403
