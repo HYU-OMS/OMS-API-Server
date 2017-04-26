@@ -185,3 +185,4 @@ ENV/
 .ropeproject
 
 config.py
+zappa_settings.json

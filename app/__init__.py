@@ -6,7 +6,7 @@ from flask_restful import Resource, Api
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 app.config.from_object('config')
-api = Api(app)
+api = Api(app, catch_all_404s=True)
 
 db = None
 db_engine = None
