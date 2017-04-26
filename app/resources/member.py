@@ -48,10 +48,12 @@ class Member(Resource):
         if 'group_id' not in body:
             return {"message": "'group_id' not provided!"}, 400
 
+        group_id = int(body['group_id'])
+
         with db_engine.connect() as connection:
             query_str = "SELECT * FROM `members` WHERE `group_id` = :group_id AND `user_id` = :user_id"
             chk_permission = connection.execute(text(query_str),
-                                                group_id=body['group_id'], user_id=self.user_info['id']).first()
+                                                group_id=group_id, user_id=self.user_info['id']).first()
 
             if chk_permission is None or int(chk_permission['role']) < 2:
                 return {"message": "You are not a admin of this group!"}, 403
@@ -66,7 +68,7 @@ class Member(Resource):
                 if chk_user is None:
                     return {"message": "Requested 'email' not exists!"}, 404
 
-                user_id = chk_user['id']
+                user_id = int(chk_user['id'])
             else:
                 query_str = "SELECT * FROM `users` WHERE `id` = :user_id"
                 chk_user = connection.execute(text(query_str), user_id=body['user_id']).first()
@@ -74,7 +76,7 @@ class Member(Resource):
                 if chk_user is None:
                     return {"message": "Requested 'user_id' not exists!"}, 404
 
-                user_id = body['user_id']
+                user_id = int(body['user_id'])
 
             query_str = "INSERT INTO `members` SET `group_id` = :group_id, `user_id` = :user_id," \
                         "`created_at` = :cur_time, `updated_at` = :cur_time"
@@ -85,7 +87,7 @@ class Member(Resource):
 
         return {
             "user_id": user_id,
-            "group_id": body['group_id'],
+            "group_id": group_id,
             "member_id": new_member_id
         }, 200
 
