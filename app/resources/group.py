@@ -21,8 +21,9 @@ class Group(Resource):
             page = int(request.args['page'])
 
         with db_engine.connect() as connection:
-            fetch_query = " SELECT `groups`.`id`, `groups`.`name`, `groups`.`creator_id`, `groups`.`created_at` " \
-                          "FROM `groups` JOIN `members` ON `groups`.`id` = `members`.`group_id` " \
+            fetch_query = " SELECT `groups`.`id`, `groups`.`name`, `groups`.`creator_id`, `members`,`role`, " \
+                          "`groups`.`created_at`, FROM `groups` " \
+                          "JOIN `members` ON `groups`.`id` = `members`.`group_id` " \
                           "WHERE `members`.`user_id` = :user_id "
             count_query = "SELECT COUNT(`groups`.`id`) AS `cnt` FROM `groups` " \
                           "JOIN `members` ON `groups`.`id` = `members`.`group_id` " \
