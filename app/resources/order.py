@@ -189,7 +189,7 @@ class Order(Resource):
                             "WHERE `order_id` = :order_id"
                 query = connection.execute(text(query_str), group_id=group_id, table_id=table_id, order_id=new_order_id)
 
-        return {"order_id": new_order_id}, 200
+        return {"order_id": new_order_id, "total_price": total_price}, 200
 
 
 class OrderEach(Resource):
