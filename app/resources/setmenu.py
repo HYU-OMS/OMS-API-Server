@@ -71,6 +71,13 @@ class Setmenu(Resource):
         if len(menu_list) == 0:
             return {"message": "'menu_list' array is empty!"}, 400
 
+        set_content = dict()
+        for menu_id in menu_list:
+            if str(menu_id) not in set_content:
+                set_content[str(menu_id)] = 1
+            else:
+                set_content[str(menu_id)] += 1
+
         with db_engine.connect() as connection:
             query_str = "SELECT * FROM `members` WHERE `group_id` = :group_id AND `user_id` = :user_id"
             chk_permission = connection.execute(text(query_str),
@@ -94,9 +101,11 @@ class Setmenu(Resource):
 
                 new_setmenu_id = query.lastrowid
 
-                for menu_id in menu_list:
-                    query_str = "INSERT INTO `set_contents` SET `set_id` = :set_id, `menu_id` = :menu_id"
-                    query = connection.execute(text(query_str), set_id=new_setmenu_id, menu_id=menu_id)
+                for key in set_content:
+                    query_str = "INSERT INTO `set_contents` SET " \
+                                "`set_id` = :set_id, `menu_id` = :menu_id, `amount` = :amount"
+                    query = connection.execute(text(query_str),
+                                               set_id=new_setmenu_id, menu_id=int(key), amount=int(set_content[key]))
 
         return {"setmenu_id": new_setmenu_id}, 200
 

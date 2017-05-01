@@ -1,8 +1,8 @@
 from flask import request, make_response, jsonify
-from app import db_engine, db, app
+from app import db_engine, app
 from sqlalchemy import text
 import jwt
-from datetime import datetime
+from datetime import datetime, timezone
 
 
 # Request 요청 시 사전 수행 작업 (DB connection 생성 및 JWT 확인)
@@ -17,11 +17,11 @@ def before_request():
         except jwt.exceptions.DecodeError as err:
             return make_response(jsonify({
                 "message": "Failed to decode jwt!"
-            }), 400)
+            }), 401)
         except jwt.exceptions.ExpiredSignatureError as err:
             return make_response(jsonify({
                 "message": "Provided jwt has been expired!",
-            }), 400)
+            }), 401)
 
     if decoded_token is not None:
         with db_engine.connect() as connection:
@@ -47,6 +47,6 @@ def json_serial(obj):
     """JSON serializer for objects not serializable by default json code"""
 
     if isinstance(obj, datetime):
-        serial = obj.isoformat()
+        serial = obj.replace(tzinfo=timezone.utc).isoformat()
         return serial
     raise TypeError ("Type not serializable")

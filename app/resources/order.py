@@ -178,7 +178,7 @@ class Order(Resource):
                 query_str = "INSERT INTO `order_transactions` " \
                             "(order_id, menu_id, set_reference_id, amount, created_at, updated_at) " \
                             "SELECT :order_id AS `order_id`, `menu_id`, :setmenu_id AS `set_reference_id`, " \
-                            ":amount AS `amount`, :cur_time AS `created_at`, :cur_time AS `updated_at` " \
+                            ":amount * `amount` AS `amount`, :cur_time AS `created_at`, :cur_time AS `updated_at` " \
                             "FROM `set_contents` WHERE `set_id` = :setmenu_id"
 
                 for content in setmenu_list:
