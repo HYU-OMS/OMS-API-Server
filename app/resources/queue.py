@@ -62,10 +62,10 @@ class Queue(Resource):
             return {"message": "Unable to get json post data!"}, 400
 
         if 'order_id' not in body:
-            return {"message": "'group_id' not provided!"}, 400
+            return {"message": "'order_id' not provided!"}, 400
 
         if 'menu_id' not in body:
-            return {"message": "'group_id' not provided!"}, 400
+            return {"message": "'menu_id' not provided!"}, 400
 
         if 'set_reference_id' not in body:
             return {"message": "'set_reference_id' not provided!"}, 400

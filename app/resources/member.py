@@ -33,9 +33,7 @@ class Member(Resource):
 
             members_list = [dict(row) for row in query]
 
-        return {
-            "list": members_list
-        }, 200
+        return members_list, 200
 
     def post(self):
         if self.user_info is None:
@@ -78,17 +76,21 @@ class Member(Resource):
 
                 user_id = int(body['user_id'])
 
+            query_str = "SELECT * FROM `members` WHERE `group_id` = :group_id AND `user_id` = :user_id"
+            chk_member_exists = connection.execute(text(query_str),
+                                                   group_id=group_id, user_id=user_id).first()
+
+            if chk_member_exists is not None:
+                return {"message": "Requested user is already member of this group!"}, 403
+
             query_str = "INSERT INTO `members` SET `group_id` = :group_id, `user_id` = :user_id," \
                         "`created_at` = :cur_time, `updated_at` = :cur_time"
             query = connection.execute(text(query_str), group_id=body['group_id'], user_id=user_id,
                                        cur_time=datetime.utcnow())
 
-            new_member_id = query.lastrowid
-
         return {
             "user_id": user_id,
-            "group_id": group_id,
-            "member_id": new_member_id
+            "group_id": group_id
         }, 200
 
     def put(self):
