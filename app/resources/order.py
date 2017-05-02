@@ -38,6 +38,7 @@ class Order(Resource):
                               "WHERE `orders`.`group_id` = :group_id AND `orders`.`status` = 0 "
                 count_query = " SELECT COUNT(`orders`.`id`) AS `cnt` FROM `orders` " \
                               "WHERE `orders`.`group_id` = :group_id AND `orders`.`status` = 0 "
+                order_query = " ORDER BY `id` ASC "
             else:
                 fetch_query = " SELECT `orders`.`id`, `orders`.`user_id`, `users`.`name`, `orders`.`table_id`, " \
                               "`orders`.`total_price`, `orders`.`status`, `orders`.`created_at`, " \
@@ -46,8 +47,7 @@ class Order(Resource):
                               "WHERE `orders`.`group_id` = :group_id "
                 count_query = " SELECT COUNT(`orders`.`id`) AS `cnt` FROM `orders` " \
                               "WHERE `orders`.`group_id` = :group_id "
-
-            order_query = " ORDER BY `id` DESC "
+                order_query = " ORDER BY `id` DESC "
 
             result, paging = Pagination(fetch=fetch_query,
                                         count=count_query,
@@ -98,6 +98,9 @@ class Order(Resource):
         if len(menu_list) == 0 and len(setmenu_list) == 0:
             return {"message": "Either 'menu_list' or 'setmenu_list' must be provided!"}, 400
 
+        order_menus = []
+        order_setmenus = []
+
         with db_engine.connect() as connection:
             query_str = "SELECT * FROM `members` WHERE `group_id` = :group_id AND `user_id` = :user_id"
             chk_member = connection.execute(text(query_str),
@@ -132,6 +135,11 @@ class Order(Resource):
                     return {"message": str(group_menus[menu_info['id']]['name']) + " has been disabled!"}, 403
 
                 total_price += (int(menu_info['amount']) * int(group_menus[menu_info['id']]['price']))
+                order_menus.append({
+                    "id": menu_info['id'],
+                    "name": group_menus[menu_info['id']]['name'],
+                    "amount": menu_info['amount']
+                })
 
             query_str = "SELECT `id`, `name`, `price`, `is_enabled` FROM `setmenus` WHERE `group_id` = :group_id"
             query = connection.execute(text(query_str), group_id=group_id)
@@ -157,13 +165,19 @@ class Order(Resource):
                     return {"message": str(group_setmenus[setmenu_info['id']]['name']) + " has been disabled!"}, 403
 
                 total_price += (int(setmenu_info['amount']) * int(group_setmenus[setmenu_info['id']]['price']))
+                order_setmenus.append({
+                    "id": setmenu_info['id'],
+                    "name": group_setmenus[setmenu_info['id']]['name'],
+                    "amount": setmenu_info['amount']
+                })
 
             with connection.begin() as transaction:
                 query_str = "INSERT INTO `orders` SET `user_id` = :user_id, `group_id` = :group_id, " \
-                            "`table_id` = :table_id, `total_price` = :total_price, " \
-                            "`created_at` = :cur_time, `updated_at` = :cur_time"
+                            "`table_id` = :table_id, `total_price` = :total_price, `order_menus` = :menu_list, " \
+                            "`order_setmenus` = :setmenu_list, `created_at` = :cur_time, `updated_at` = :cur_time"
                 query = connection.execute(text(query_str), user_id=self.user_info['id'], group_id=group_id,
-                                           table_id=table_id, total_price=total_price, cur_time=datetime.utcnow())
+                                           table_id=table_id, total_price=total_price, menu_list=json.dumps(order_menus),
+                                           setmenu_list=json.dumps(order_setmenus), cur_time=datetime.utcnow())
 
                 new_order_id = query.lastrowid
 
@@ -195,6 +209,34 @@ class Order(Resource):
 class OrderEach(Resource):
     def __init__(self):
         self.user_info = request.user_info
+
+    def get(self, order_id):
+        if self.user_info is None:
+            return {"message": "JWT must be provided!"}, 401
+
+        with db_engine.connect() as connection:
+            query_str = "SELECT `group_id`, `order_menus`, `order_setmenus` FROM `orders` WHERE `id` = :order_id"
+            order_info = connection.execute(text(query_str), order_id=order_id).first()
+
+            if order_info is None:
+                return {"message": "Requested 'order_id' not exists!"}, 404
+
+            group_id = int(order_info['group_id'])
+
+            query_str = "SELECT * FROM `members` WHERE `group_id` = :group_id AND `user_id` = :user_id"
+            chk_permission = connection.execute(text(query_str),
+                                                group_id=group_id, user_id=self.user_info['id']).first()
+
+            if chk_permission is None:
+                return {"message": "Only member of this group can get order info!"}, 403
+
+            order_data = json.loads(json.dumps(dict(order_info), default=helper.json_serial))
+            order_data['order_menus'] = json.loads(order_data['order_menus'])
+            order_data['order_setmenus'] = json.loads(order_data['order_setmenus'])
+            del order_data['group_id']
+            order_data['order_id'] = order_id
+
+        return order_data, 200
 
     def put(self, order_id):
         if self.user_info is None:
