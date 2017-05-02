@@ -153,7 +153,7 @@ class Order(Resource):
                 if setmenu_info['id'] not in group_setmenus:
                     return {"message": "SetMenuID " + str(setmenu_info['id']) + " not belongs to this group!"}, 400
 
-                if int(group_menus[setmenu_info['id']]['is_enabled']) == 0:
+                if int(group_setmenus[setmenu_info['id']]['is_enabled']) == 0:
                     return {"message": str(group_setmenus[setmenu_info['id']]['name']) + " has been disabled!"}, 403
 
                 total_price += (int(setmenu_info['amount']) * int(group_setmenus[setmenu_info['id']]['price']))
