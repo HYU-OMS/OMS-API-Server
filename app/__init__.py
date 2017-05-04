@@ -1,6 +1,7 @@
 from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
+from sqlalchemy.pool import NullPool
 from flask_restful import Api
 
 app = Flask(__name__)
@@ -15,7 +16,7 @@ if db is None and db_engine is None:
     db_engine = db.create_engine(app.config['SQLALCHEMY_DATABASE_URI'],
                                  encoding='utf-8',
                                  connect_args=app.config['DATABASE_CONNECT_OPTIONS'],
-                                 pool_size=20, max_overflow=0)
+                                 poolclass=NullPool)
 
 from app.modules import helper
 app.before_request(helper.before_request)
