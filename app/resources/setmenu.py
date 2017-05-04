@@ -110,9 +110,37 @@ class Setmenu(Resource):
         return {"setmenu_id": new_setmenu_id}, 200
 
 
-class SetmenuEdit(Resource):
+class SetmenuEach(Resource):
     def __init__(self):
         self.user_info = request.user_info
+
+    def get(self, setmenu_id):
+        if self.user_info is None:
+            return {"message": "JWT must be provided!"}, 401
+
+        with db_engine.connect() as connection:
+            query_str = "SELECT * FROM `setmenus` WHERE `id` = :setmenu_id"
+            set_basic_info = connection.execute(text(query_str), setmenu_id=setmenu_id).first()
+
+            if set_basic_info is None:
+                return {"message": "Requested 'setmenu_id' not found!"}, 404
+
+            group_id = int(set_basic_info['group_id'])
+
+            query_str = "SELECT * FROM `members` WHERE `group_id` = :group_id AND `user_id` = :user_id"
+            chk_member = connection.execute(text(query_str), group_id=group_id, user_id=self.user_info['id']).first()
+
+            if chk_member is None:
+                return {"message": "Only member of this group can get setmenu info!"}, 403
+
+            query_str = "SELECT `menus`.`name`, `set_contents`.`amount` FROM `menus` " \
+                        "JOIN `set_contents` ON `menus`.`id` = `set_contents`.`menu_id` " \
+                        "WHERE `set_contents`.`set_id` = :setmenu_id"
+            query = connection.execute(text(query_str), setmenu_id=setmenu_id)
+
+            setmenu_info = [dict(row) for row in query]
+
+        return setmenu_info, 200
 
     def put(self, setmenu_id):
         if self.user_info is None:
