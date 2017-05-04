@@ -189,15 +189,24 @@ class Order(Resource):
                                                menu_id=content['id'], amount=content['amount'],
                                                cur_time=datetime.utcnow())
 
-                query_str = "INSERT INTO `order_transactions` " \
-                            "(order_id, menu_id, set_reference_id, amount, created_at, updated_at) " \
-                            "SELECT :order_id AS `order_id`, `menu_id`, :setmenu_id AS `set_reference_id`, " \
-                            ":amount * `amount` AS `amount`, :cur_time AS `created_at`, :cur_time AS `updated_at` " \
-                            "FROM `set_contents` WHERE `set_id` = :setmenu_id"
-
                 for content in setmenu_list:
-                    query = connection.execute(text(query_str), order_id=new_order_id, setmenu_id=content['id'],
-                                               amount=content['amount'], cur_time=datetime.utcnow())
+                    setmenu_id = int(content['id'])
+                    set_amount = int(content['amount'])
+
+                    query_str = "SELECT * FROM `set_contents` WHERE `set_id` = :setmenu_id"
+                    query = connection.execute(text(query_str), setmenu_id=setmenu_id)
+
+                    set_data = [dict(row) for row in query]
+
+                    for each_data in set_data:
+                        menu_id = int(each_data['menu_id'])
+                        menu_amount = int(each_data['amount'])
+
+                        query_str = "UPDATE `order_transactions` SET `amount` = `amount` + :amount " \
+                                    "WHERE `order_id` = :order_id AND `menu_id` = :menu_id"
+                        query = connection.execute(text(query_str),
+                                                   amount=(menu_amount * set_amount),
+                                                   order_id=new_order_id, menu_id=menu_id)
 
                 query_str = "UPDATE `order_transactions` SET `group_id` = :group_id, `table_id` = :table_id " \
                             "WHERE `order_id` = :order_id"

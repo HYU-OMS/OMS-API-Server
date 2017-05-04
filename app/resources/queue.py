@@ -32,7 +32,7 @@ class Queue(Resource):
 
             menu_list = [dict(row) for row in query]
 
-            query_str = "SELECT `order_id`, `menu_id`, `set_reference_id`, `table_id`, `amount`, `created_at` " \
+            query_str = "SELECT `order_id`, `menu_id`, `table_id`, `amount`, `created_at` " \
                         "FROM `order_transactions` " \
                         "WHERE `group_id` = :group_id AND `is_approved` = 1 AND `is_delivered` = 0"
             query = connection.execute(text(query_str), group_id=group_id)
@@ -67,20 +67,14 @@ class Queue(Resource):
         if 'menu_id' not in body:
             return {"message": "'menu_id' not provided!"}, 400
 
-        if 'set_reference_id' not in body:
-            return {"message": "'set_reference_id' not provided!"}, 400
-
         order_id = int(body['order_id'])
         menu_id = int(body['menu_id'])
-        set_reference_id = int(body['set_reference_id'])
 
         with db_engine.connect() as connection:
             query_str = "SELECT * FROM `order_transactions` " \
-                        "WHERE `order_id` = :order_id AND `menu_id` = :menu_id " \
-                        "AND `set_reference_id` = :set_reference_id"
+                        "WHERE `order_id` = :order_id AND `menu_id` = :menu_id "
             chk_queue = connection.execute(text(query_str),
-                                           order_id=order_id, menu_id=menu_id,
-                                           set_reference_id=set_reference_id).first()
+                                           order_id=order_id, menu_id=menu_id).first()
 
             if chk_queue is None:
                 return {"message": "Requested queue('order_id', 'menu_id') not exists!"}, 404
@@ -96,13 +90,11 @@ class Queue(Resource):
                 return {"message": "You can't update queue status!"}, 403
 
             query_str = "UPDATE `order_transactions` SET `is_delivered` = 1, `updated_at` = :cur_time " \
-                        "WHERE `order_id` = :order_id AND `menu_id` = :menu_id " \
-                        "AND `set_reference_id` = :set_reference_id"
+                        "WHERE `order_id` = :order_id AND `menu_id` = :menu_id "
             query = connection.execute(text(query_str), cur_time=datetime.utcnow(),
-                                       order_id=order_id, menu_id=menu_id, set_reference_id=set_reference_id)
+                                       order_id=order_id, menu_id=menu_id)
 
         return {
             "order_id": order_id,
-            "menu_id": menu_id,
-            "set_reference_id": set_reference_id
+            "menu_id": menu_id
         }, 200
