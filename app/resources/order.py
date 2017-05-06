@@ -38,7 +38,7 @@ class Order(Resource):
                               "WHERE `orders`.`group_id` = :group_id AND `orders`.`status` = 0 "
                 count_query = " SELECT COUNT(`orders`.`id`) AS `cnt` FROM `orders` " \
                               "WHERE `orders`.`group_id` = :group_id AND `orders`.`status` = 0 "
-                order_query = " ORDER BY `id` ASC "
+                order_query = " ORDER BY `orders`.`id` ASC "
             else:
                 fetch_query = " SELECT `orders`.`id`, `orders`.`user_id`, `users`.`name`, `orders`.`table_id`, " \
                               "`orders`.`total_price`, `orders`.`status`, `orders`.`created_at`, " \
@@ -47,7 +47,7 @@ class Order(Resource):
                               "WHERE `orders`.`group_id` = :group_id "
                 count_query = " SELECT COUNT(`orders`.`id`) AS `cnt` FROM `orders` " \
                               "WHERE `orders`.`group_id` = :group_id "
-                order_query = " ORDER BY `id` DESC "
+                order_query = " ORDER BY `orders`.`id` DESC "
 
             result, paging = Pagination(fetch=fetch_query,
                                         count=count_query,

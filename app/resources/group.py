@@ -28,7 +28,7 @@ class Group(Resource):
             count_query = "SELECT COUNT(`groups`.`id`) AS `cnt` FROM `groups` " \
                           "JOIN `members` ON `groups`.`id` = `members`.`group_id` " \
                           "WHERE `members`.`user_id` = :user_id "
-            order_query = " ORDER BY `id` DESC "
+            order_query = " ORDER BY `groups`.`id` DESC "
 
             result, paging = Pagination(fetch=fetch_query,
                                         count=count_query,

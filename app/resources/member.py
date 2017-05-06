@@ -26,9 +26,10 @@ class Member(Resource):
             if chk_member is None:
                 return {"message": "You are not a member of this group!"}, 403
 
-            query_str = "SELECT `users`.`name`, `members`.`user_id`, `members`.`role` FROM `members` " \
+            query_str = "SELECT `users`.`name`, `users`.`id`, `members`.`role` FROM `members` " \
                         "JOIN `users` ON `users`.`id` = `members`.`user_id` " \
-                        "WHERE `members`.`group_id` = :group_id"
+                        "WHERE `members`.`group_id` = :group_id " \
+                        "ORDER BY `users`.`id` ASC"
             query = connection.execute(text(query_str), group_id=group_id)
 
             members_list = [dict(row) for row in query]
