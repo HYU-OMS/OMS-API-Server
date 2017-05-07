@@ -2,12 +2,18 @@ from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
 from sqlalchemy.pool import NullPool
-from flask_restful import Api
+from flask_restplus import Api
 
 app = Flask(__name__)
 CORS(app, supports_credentials=True)
 app.config.from_object('config')
-api = Api(app, catch_all_404s=True)
+api = Api(app=app,
+          catch_all_404s=True,
+          title="2017 OMS API",
+          description="2017년도 한양대학교 주문관리시스템 API description page",
+          contact="한양대학교 한기훈",
+          contact_email="kordreamfollower@gmail.com",
+          prefix="/api")
 
 db = None
 db_engine = None
@@ -21,21 +27,14 @@ if db is None and db_engine is None:
 from app.modules import helper
 app.before_request(helper.before_request)
 
-from app.resources.user import User
-from app.resources.group import Group
-from app.resources.member import Member
-from app.resources.menu import Menu, MenuEdit
-from app.resources.setmenu import Setmenu, SetmenuEach
-from app.resources.order import Order, OrderEach
-from app.resources.queue import Queue
-
-api.add_resource(User, '/api/user')
-api.add_resource(Group, '/api/group')
-api.add_resource(Member, '/api/member')
-api.add_resource(Menu, '/api/menu')
-api.add_resource(MenuEdit, '/api/menu/<int:menu_id>')
-api.add_resource(Setmenu, '/api/setmenu')
-api.add_resource(SetmenuEach, '/api/setmenu/<int:setmenu_id>')
-api.add_resource(Order, '/api/order')
-api.add_resource(OrderEach, '/api/order/<int:order_id>')
-api.add_resource(Queue, '/api/queue')
+from app.resources import *
+api.add_resource(user.User, '/user')
+api.add_resource(group.Group, '/group')
+api.add_resource(member.Member, '/member')
+api.add_resource(menu.Menu, '/menu')
+api.add_resource(menu.MenuEach, '/menu/<int:menu_id>')
+api.add_resource(setmenu.Setmenu, '/setmenu')
+api.add_resource(setmenu.SetmenuEach, '/setmenu/<int:setmenu_id>')
+api.add_resource(order.Order, '/order')
+api.add_resource(order.OrderEach, '/order/<int:order_id>')
+api.add_resource(queue.Queue, '/queue')

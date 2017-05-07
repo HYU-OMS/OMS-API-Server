@@ -1,19 +1,38 @@
-from flask_restful import Resource
+from flask_restplus import Resource, fields
 from flask import request
-from app import db_engine
+from app import db_engine, api
 from sqlalchemy import text
 from datetime import datetime
 from app.modules.pagination import Pagination
 import app.modules.helper as helper
 import json
 
+ns = api.namespace('group', description="그룹 관련 API (목록 조회, 새로 생성)")
+group_post_payload = api.model('Group_Post_Payload', {
+    'name': fields.String("새로 생성할 그룹 이름 (중복 가능)"),
+})
+group_get_success = api.model('Group_Get_Success', {
+    "list": fields.List(fields.Raw({
+        "id": "그룹 고유번호",
+        "name": "그룹 이름",
+        "creator_id": "그룹 생성한 유저 고유번호",
+        "role": "이 그룹에서 현재 유저가 가진 권한 (0: 일반 유저, 1: 중간 관리자, 2: 최고 관리자)",
+        "created_at": "생성일자, Datetime ISO Format으로 주어짐"
+    })),
+    "pagination": fields.List(fields.Raw({
+        'num': "pagination 번호",
+        'text': 'pagination 단추에서 표시할 텍스트',
+        'current': "현재 선택된 page면 true, 아닐 경우 false"
+    }))
+})
 
+
+@ns.route('')
+@ns.param("jwt", "로그인 시 얻은 JWT를 입력", _in="query", required=True)
 class Group(Resource):
-    def __init__(self):
-        self.user_info = request.user_info
-
+    @ns.response(200, "그룹 목록", model=group_get_success, as_list=True)
     def get(self):
-        if self.user_info is None:
+        if request.user_info is None:
             return {"message": "JWT must be provided!"}, 401
 
         page = 1
@@ -35,15 +54,17 @@ class Group(Resource):
                                         order=order_query,
                                         current_page=page,
                                         connection=connection,
-                                        fetch_params={'user_id': self.user_info['id']}).get_result()
+                                        fetch_params={'user_id': request.user_info['id']}).get_result()
 
         return json.loads(str(json.dumps({
             'list': result,
             'pagination': paging
         }, default=helper.json_serial))), 200
 
+    @ns.doc(body=group_post_payload)
+    @ns.response(201, "새 그룹을 성공적으로 생성함")
     def post(self):
-        if self.user_info is None:
+        if request.user_info is None:
             return {"message": "JWT must be provided!"}, 401
 
         body = request.get_json(silent=True, force=True)
@@ -57,14 +78,14 @@ class Group(Resource):
             with connection.begin() as transaction:
                 query_str = "INSERT INTO `groups` SET `name` = :name, `creator_id` = :user_id, " \
                             "`created_at` = :cur_time, `updated_at` = :cur_time"
-                query = connection.execute(text(query_str), name=body['name'], user_id=self.user_info['id'],
+                query = connection.execute(text(query_str), name=body['name'], user_id=request.user_info['id'],
                                            cur_time=datetime.utcnow())
 
                 new_group_id = query.lastrowid
 
                 query_str = "INSERT INTO `members` SET `group_id` = :group_id, `user_id` = :user_id, `role` = '2', " \
                             "`created_at` = :cur_time, `updated_at` = :cur_time"
-                query = connection.execute(text(query_str), group_id=new_group_id, user_id=self.user_info['id'],
+                query = connection.execute(text(query_str), group_id=new_group_id, user_id=request.user_info['id'],
                                            cur_time=datetime.utcnow())
 
-        return {"group_id": new_group_id}, 200
+        return {"group_id": new_group_id}, 201

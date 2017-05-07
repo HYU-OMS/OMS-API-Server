@@ -1,6 +1,6 @@
-from flask_restful import Resource
+from flask_restplus import Resource, fields
 from flask import request
-from app import app, db_engine
+from app import app, db_engine, api
 from sqlalchemy import text
 import jwt
 from time import time
@@ -10,7 +10,19 @@ from uuid import uuid4
 import lepl.apps.rfc3696
 
 
+ns = api.namespace('user', description="유저 관련 API (회원가입, 로그인)")
+user_post_payload = api.model('User_Post_Payload', {
+    'name': fields.String("이름 (회원가입시에만 필요)"),
+    'email': fields.String("이메일"),
+    'password': fields.String("비밀번호")
+})
+
+
+@ns.route('')
 class User(Resource):
+    @ns.param("type", "동작 종류 ('signup' 또는 'signin')", _in="query", required=True)
+    @ns.doc(body=user_post_payload)
+    @ns.response(201, "회원가입 성공 시 새로 생성된 유저 고유번호 반환, 로그인 성공 시 JsonWebToken 반환")
     def post(self):
         if 'type' not in request.args:
             return {"message": "Argument 'type' must be provided!"}, 400
@@ -55,7 +67,7 @@ class User(Resource):
 
                     new_user_id = query.lastrowid
 
-            return {"user_id": new_user_id}, 200
+            return {"user_id": new_user_id}, 201
 
         elif request.args['type'] == 'signin':
             if 'email' not in body:

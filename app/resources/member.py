@@ -1,16 +1,36 @@
-from flask_restful import Resource
+from flask_restplus import Resource, fields
 from flask import request
-from app import db_engine
+from app import db_engine, api
 from sqlalchemy import text
 from datetime import datetime
 
 
-class Member(Resource):
-    def __init__(self):
-        self.user_info = request.user_info
+ns = api.namespace('member', description="멤버 관련 API (목록 조회, 새로 추가, 권한 변경)")
+member_post_payload = api.model('Member_Post_Payload', {
+    'user_id': fields.Integer("유저 고유번호 (둘 중 하나는 필수, 둘 다 주어지면 user_id 우선으로 적용)"),
+    'user_email': fields.String("유저 이메일 (둘 중 하나는 필수)")
+})
+member_put_payload = api.model('Member_Put_Payload', {
+    "group_id": fields.Integer("그룹 고유번호"),
+    "user_id": fields.Integer("유저 고유번호"),
+    "role": fields.Integer("권한 값 (0: 일반 유저, 1: 중간 관리자, 2: 최고 관리자)")
+})
+member_get_success = api.model('Member_Get_Success', {
+    "members_list": fields.List(fields.Raw({
+        "id": "유저 고유번호",
+        "name": "유저 이름",
+        "role": "권한 값 (0: 일반 유저, 1: 중간 관리자, 2: 최고 관리자)"
+    }))
+})
 
+
+@ns.route('')
+@ns.param("jwt", "로그인 시 얻은 JWT를 입력", _in="query", required=True)
+class Member(Resource):
+    @ns.param("group_id", "그룹 고유번호 (정수값)", _in="query", required=True)
+    @ns.response(200, "멤버 목록", model=member_get_success, as_list=True)
     def get(self):
-        if self.user_info is None:
+        if request.user_info is None:
             return {"message": "JWT must be provided!"}, 401
 
         if 'group_id' not in request.args:
@@ -21,7 +41,7 @@ class Member(Resource):
         with db_engine.connect() as connection:
             query_str = "SELECT * FROM `members` WHERE `group_id` = :group_id AND `user_id` = :user_id"
             chk_member = connection.execute(text(query_str),
-                                            group_id=group_id, user_id=self.user_info['id']).first()
+                                            group_id=group_id, user_id=request.user_info['id']).first()
 
             if chk_member is None:
                 return {"message": "You are not a member of this group!"}, 403
@@ -34,10 +54,12 @@ class Member(Resource):
 
             members_list = [dict(row) for row in query]
 
-        return members_list, 200
+        return {"list": members_list}, 200
 
+    @ns.doc(body=member_post_payload)
+    @ns.response(201, "현재 그룹에 새로운 멤버 등록을 성공함")
     def post(self):
-        if self.user_info is None:
+        if request.user_info is None:
             return {"message": "JWT must be provided!"}, 401
 
         body = request.get_json(silent=True, force=True)
@@ -52,7 +74,7 @@ class Member(Resource):
         with db_engine.connect() as connection:
             query_str = "SELECT * FROM `members` WHERE `group_id` = :group_id AND `user_id` = :user_id"
             chk_permission = connection.execute(text(query_str),
-                                                group_id=group_id, user_id=self.user_info['id']).first()
+                                                group_id=group_id, user_id=request.user_info['id']).first()
 
             if chk_permission is None or int(chk_permission['role']) < 2:
                 return {"message": "You are not a admin of this group!"}, 403
@@ -94,8 +116,10 @@ class Member(Resource):
             "group_id": group_id
         }, 200
 
+    @ns.doc(body=member_put_payload)
+    @ns.response(200, "권한 변경 성공")
     def put(self):
-        if self.user_info is None:
+        if request.user_info is None:
             return {"message": "JWT must be provided!"}, 401
 
         body = request.get_json(silent=True, force=True)
@@ -116,12 +140,12 @@ class Member(Resource):
         role = int(body['role'])
 
         if role < 0 or role > 2:
-            return {"message": "'role' must be 0 or 1 or 2!"}, 40
+            return {"message": "'role' must be 0 or 1 or 2!"}, 400
 
         with db_engine.connect() as connection:
             query_str = "SELECT * FROM `members` WHERE `group_id` = :group_id AND `user_id` = :user_id AND `role` = 2"
             chk_permission = connection.execute(text(query_str),
-                                                group_id=group_id, user_id=self.user_info['id']).first()
+                                                group_id=group_id, user_id=request.user_info['id']).first()
 
             if chk_permission is None:
                 return {"message": "You are not a admin of this group!"}, 403

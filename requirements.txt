@@ -1,9 +1,9 @@
 flask
 flask-sqlalchemy
-flask_restful
 sqlalchemy
 flask-cors
 PyJWT
 PyMySQL
 passlib
 lepl
+flask-restplus

@@ -1,19 +1,68 @@
-from flask_restful import Resource
+from flask_restplus import Resource, fields
 from flask import request
-from app import db_engine
+from app import db_engine, api
 from sqlalchemy import text
 from datetime import datetime
 from app.modules.pagination import Pagination
 import app.modules.helper as helper
 import json
 
+ns = api.namespace('order', description="주문 관련 API (주문 내역 조회, 새 주문 넣기, 주문 승인/취소)")
+order_get_success = api.model('Order_Get_Success', {
+    "list": fields.List(fields.Raw({
+        "id": "주문 고유번호",
+        "user_id": "주문을 넣은 유저 고유번호",
+        "name": "주문을 넣은 유저 이름",
+        "table_id": "해당 주문을 받은 테이블 이름",
+        "status": "주문 처리 상태 (0: 대기, 1: 승인, -1: 취소)",
+        "total_price": "총 주문 금액",
+        "created_at": "주문을 받은 시간 (datetime ISO format)"
+    })),
+    "pagination": fields.List(fields.Raw({
+        'num': "pagination 번호",
+        'text': 'pagination 단추에서 표시할 텍스트',
+        'current': "현재 선택된 page면 true, 아닐 경우 false"
+    }))
+})
+order_post_payload = api.model('Order_Post_Payload', {
+    "group_id": fields.Integer("그룹 고유번호"),
+    "table_id": fields.String("테이블 이름"),
+    "menu_list": fields.List(fields.Raw({
+        "id": "메뉴 고유번호",
+        "amount": "주문 수량"
+    })),
+    "setmenu_list": fields.List(fields.Raw({
+        "id": "세트메뉴 고유번호",
+        "amount": "주문 수량"
+    }))
+})
+order_post_success = api.model('Order_Post_Success', {
+    "order_id": fields.Integer("새로 생성된 주문 번호"),
+    "total_price": fields.Integer("주문 총 금액")
+})
+order_each_get_success = api.model('OrderEach_Get_Success', {
+    "order_id": fields.Integer("주문 고유번호"),
+    "order_menus": fields.List(fields.Raw({
+        "id": "메뉴 고유번호",
+        "name": "메뉴 이름",
+        "amount": "메뉴 수량"
+    })),
+    "order_setmenus": fields.List(fields.Raw({
+        "id": "메뉴 고유번호",
+        "name": "세트메뉴 이름",
+        "amount": "세트메뉴 수량"
+    }))
+})
 
+
+@ns.route('')
+@ns.param("jwt", "로그인 시 얻은 JWT를 입력", _in="query", required=True)
 class Order(Resource):
-    def __init__(self):
-        self.user_info = request.user_info
-
+    @ns.param("group_id", "그룹 고유번호", _in="query", required=True)
+    @ns.param("show_only_pending", "처리되지 않은 주문만 볼 것인지 지정 (0: 전부 보기, 1: 처리 대기중인 것만 보기)", _in="query", required=False)
+    @ns.response(200, "현재 주문 내역을 가져온다.", model=order_get_success)
     def get(self):
-        if self.user_info is None:
+        if request.user_info is None:
             return {"message": "JWT must be provided!"}, 401
 
         if 'group_id' not in request.args:
@@ -32,8 +81,7 @@ class Order(Resource):
         with db_engine.connect() as connection:
             if show_only_pending == 1:
                 fetch_query = " SELECT `orders`.`id`, `orders`.`user_id`, `users`.`name`, `orders`.`table_id`, " \
-                              "`orders`.`total_price`, `orders`.`created_at`, " \
-                              "`orders`.`updated_at` FROM `orders` " \
+                              "`orders`.`total_price`, `orders`.`status`, `orders`.`created_at` FROM `orders` " \
                               "JOIN `users` ON `users`.`id` = `orders`.`user_id` " \
                               "WHERE `orders`.`group_id` = :group_id AND `orders`.`status` = 0 "
                 count_query = " SELECT COUNT(`orders`.`id`) AS `cnt` FROM `orders` " \
@@ -41,8 +89,7 @@ class Order(Resource):
                 order_query = " ORDER BY `orders`.`id` ASC "
             else:
                 fetch_query = " SELECT `orders`.`id`, `orders`.`user_id`, `users`.`name`, `orders`.`table_id`, " \
-                              "`orders`.`total_price`, `orders`.`status`, `orders`.`created_at`, " \
-                              "`orders`.`updated_at` FROM `orders` " \
+                              "`orders`.`total_price`, `orders`.`status`, `orders`.`created_at` FROM `orders` " \
                               "JOIN `users` ON `users`.`id` = `orders`.`user_id` " \
                               "WHERE `orders`.`group_id` = :group_id "
                 count_query = " SELECT COUNT(`orders`.`id`) AS `cnt` FROM `orders` " \
@@ -55,7 +102,7 @@ class Order(Resource):
                                         current_page=page,
                                         connection=connection,
                                         fetch_params={
-                                            'user_id': self.user_info['id'],
+                                            'user_id': request.user_info['id'],
                                             'group_id': group_id
                                         }).get_result()
 
@@ -64,8 +111,10 @@ class Order(Resource):
             'pagination': paging
         }, default=helper.json_serial))), 200
 
+    @ns.doc(body=order_post_payload)
+    @ns.response(201, "주문 요청 성공", model=order_post_success)
     def post(self):
-        if self.user_info is None:
+        if request.user_info is None:
             return {"message": "JWT must be provided!"}, 401
 
         body = request.get_json(silent=True, force=True)
@@ -104,7 +153,7 @@ class Order(Resource):
         with db_engine.connect() as connection:
             query_str = "SELECT * FROM `members` WHERE `group_id` = :group_id AND `user_id` = :user_id"
             chk_member = connection.execute(text(query_str),
-                                                group_id=group_id, user_id=self.user_info['id']).first()
+                                                group_id=group_id, user_id=request.user_info['id']).first()
 
             if chk_member is None:
                 return {"message": "You are not a member of this group!"}, 403
@@ -175,7 +224,7 @@ class Order(Resource):
                 query_str = "INSERT INTO `orders` SET `user_id` = :user_id, `group_id` = :group_id, " \
                             "`table_id` = :table_id, `total_price` = :total_price, `order_menus` = :menu_list, " \
                             "`order_setmenus` = :setmenu_list, `created_at` = :cur_time, `updated_at` = :cur_time"
-                query = connection.execute(text(query_str), user_id=self.user_info['id'], group_id=group_id,
+                query = connection.execute(text(query_str), user_id=request.user_info['id'], group_id=group_id,
                                            table_id=table_id, total_price=total_price, menu_list=json.dumps(order_menus),
                                            setmenu_list=json.dumps(order_setmenus), cur_time=datetime.utcnow())
 
@@ -212,15 +261,15 @@ class Order(Resource):
                             "WHERE `order_id` = :order_id"
                 query = connection.execute(text(query_str), group_id=group_id, table_id=table_id, order_id=new_order_id)
 
-        return {"order_id": new_order_id, "total_price": total_price}, 200
+        return {"order_id": new_order_id, "total_price": total_price}, 201
 
 
+@ns.route('/<int:order_id>')
+@ns.param("jwt", "로그인 시 얻은 JWT를 입력", _in="query", required=True)
 class OrderEach(Resource):
-    def __init__(self):
-        self.user_info = request.user_info
-
+    @ns.response(200, "주문 내용 조회 성공", model=order_each_get_success)
     def get(self, order_id):
-        if self.user_info is None:
+        if request.user_info is None:
             return {"message": "JWT must be provided!"}, 401
 
         with db_engine.connect() as connection:
@@ -234,7 +283,7 @@ class OrderEach(Resource):
 
             query_str = "SELECT * FROM `members` WHERE `group_id` = :group_id AND `user_id` = :user_id"
             chk_permission = connection.execute(text(query_str),
-                                                group_id=group_id, user_id=self.user_info['id']).first()
+                                                group_id=group_id, user_id=request.user_info['id']).first()
 
             if chk_permission is None:
                 return {"message": "Only member of this group can get order info!"}, 403
@@ -247,8 +296,10 @@ class OrderEach(Resource):
 
         return order_data, 200
 
+    @ns.param("is_approved", "주문 승인 여부 (1: 승인, 0: 취소)", _in="query", required=True)
+    @ns.response(200, "주문 상태 변경 성공")
     def put(self, order_id):
-        if self.user_info is None:
+        if request.user_info is None:
             return {"message": "JWT must be provided!"}, 401
 
         body = request.get_json(silent=True, force=True)
@@ -277,7 +328,7 @@ class OrderEach(Resource):
 
             query_str = "SELECT * FROM `members` WHERE `group_id` = :group_id AND `user_id` = :user_id AND `role` > 0"
             chk_permission = connection.execute(text(query_str),
-                                                group_id=group_id, user_id=self.user_info['id']).first()
+                                                group_id=group_id, user_id=request.user_info['id']).first()
 
             if chk_permission is None:
                 return {"message": "You can't update status of this order!"}, 403

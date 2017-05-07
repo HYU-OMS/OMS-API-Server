@@ -1,16 +1,37 @@
-from flask_restful import Resource
+from flask_restplus import Resource, fields
 from flask import request
-from app import db_engine
+from app import db_engine, api
 from sqlalchemy import text
 from datetime import datetime
 
 
-class Menu(Resource):
-    def __init__(self):
-        self.user_info = request.user_info
+ns = api.namespace('menu', description="메뉴 관련 API (메뉴 조회, 새로 추가, 가격 및 상태 변경)")
+menu_get_success = api.model('Menu_Get_Success', {
+    "list": fields.List(fields.Raw({
+        "id": "메뉴 고유번호",
+        "name": "메뉴 이름",
+        "price": "메뉴 가격",
+        "is_enabled": "현재 주문 가능한지 여부"
+    }))
+})
+menu_post_payload = api.model('Menu_Post_Payload', {
+    "group_id": fields.Integer("그룹 고유번호"),
+    "name": fields.String("메뉴 이름"),
+    "price": fields.Integer("메뉴 가격")
+})
+menu_put_payload = api.model('Menu_Put_Payload', {
+    "price": fields.Integer("메뉴 가격"),
+    "is_enabled": fields.Integer("주문가능여부 (0: 불가, 1: 가능)")
+})
 
+
+@ns.route('')
+@ns.param("jwt", "로그인 시 얻은 JWT를 입력", _in="query", required=True)
+class Menu(Resource):
+    @ns.param("group_id", "그룹 고유번호", _in="query", required=True)
+    @ns.response(200, "메뉴 목록 조회 성공", model=menu_get_success)
     def get(self):
-        if self.user_info is None:
+        if request.user_info is None:
             return {"message": "JWT must be provided!"}, 401
 
         if 'group_id' not in request.args:
@@ -20,12 +41,12 @@ class Menu(Resource):
 
         with db_engine.connect() as connection:
             query_str = "SELECT * FROM `members` WHERE `group_id` = :group_id AND `user_id` = :user_id"
-            chk_member = connection.execute(text(query_str), group_id=group_id, user_id=self.user_info['id']).first()
+            chk_member = connection.execute(text(query_str), group_id=group_id, user_id=request.user_info['id']).first()
 
             if chk_member is None:
                 return {"message": "Only member of this group can view menu list!"}, 403
 
-            query_str = "SELECT `id`, `name`, `price`, `is_enabled`, `category` FROM `menus` " \
+            query_str = "SELECT `id`, `name`, `price`, `is_enabled` FROM `menus` " \
                         "WHERE `group_id` = :group_id"
             query = connection.execute(text(query_str), group_id=group_id)
 
@@ -33,8 +54,10 @@ class Menu(Resource):
 
         return {"list": menu_list}, 200
 
+    @ns.doc(body=menu_post_payload)
+    @ns.response(201, "새 메뉴 등록 성공")
     def post(self):
-        if self.user_info is None:
+        if request.user_info is None:
             return {"message": "JWT must be provided!"}, 401
 
         body = request.get_json(silent=True, force=True)
@@ -56,7 +79,7 @@ class Menu(Resource):
         with db_engine.connect() as connection:
             query_str = "SELECT * FROM `members` WHERE `group_id` = :group_id AND `user_id` = :user_id"
             chk_permission = connection.execute(text(query_str),
-                                                group_id=group_id, user_id=self.user_info['id']).first()
+                                                group_id=group_id, user_id=request.user_info['id']).first()
 
             if chk_permission is None:
                 return {"message": "You can't add menu in this group!"}, 403
@@ -69,15 +92,16 @@ class Menu(Resource):
 
             new_menu_id = query.lastrowid
 
-        return {"menu_id": new_menu_id}, 200
+        return {"menu_id": new_menu_id}, 201
 
 
-class MenuEdit(Resource):
-    def __init__(self):
-        self.user_info = request.user_info
-
+@ns.route('/<int:menu_id>')
+@ns.param("jwt", "로그인 시 얻은 JWT를 입력", _in="query", required=True)
+class MenuEach(Resource):
+    @ns.doc(body=menu_put_payload)
+    @ns.response(200, "메뉴 정보 변경 성공")
     def put(self, menu_id):
-        if self.user_info is None:
+        if request.user_info is None:
             return {"message": "JWT must be provided!"}, 401
 
         body = request.get_json(silent=True, force=True)
@@ -104,7 +128,7 @@ class MenuEdit(Resource):
 
             query_str = "SELECT * FROM `members` WHERE `group_id` = :group_id AND `user_id` = :user_id"
             chk_permission = connection.execute(text(query_str),
-                                                group_id=group_id, user_id=self.user_info['id']).first()
+                                                group_id=group_id, user_id=request.user_info['id']).first()
 
             if chk_permission is None:
                 return {"message": "You can't update menu in this group!"}, 403
