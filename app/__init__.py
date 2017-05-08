@@ -12,7 +12,8 @@ api = Api(app=app,
           description="2017년도 한양대학교 주문관리시스템 API description page",
           contact="한양대학교 한기훈",
           contact_email="kordreamfollower@gmail.com",
-          prefix="/api")
+          prefix="/api",
+          doc="/api")
 
 db = None
 db_engine = None
