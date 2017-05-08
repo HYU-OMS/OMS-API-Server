@@ -1,11 +1,10 @@
 from flask import Flask
 from flask_cors import CORS
 from flask_sqlalchemy import SQLAlchemy
-from sqlalchemy.pool import NullPool
 from flask_restplus import Api
 
 app = Flask(__name__)
-CORS(app, supports_credentials=True)
+CORS(app, supports_credentials=True, max_age=86400)
 app.config.from_object('config')
 api = Api(app=app,
           catch_all_404s=True,
@@ -22,7 +21,7 @@ if db is None and db_engine is None:
     db_engine = db.create_engine(app.config['SQLALCHEMY_DATABASE_URI'],
                                  encoding='utf-8',
                                  connect_args=app.config['DATABASE_CONNECT_OPTIONS'],
-                                 poolclass=NullPool)
+                                 pool_size=20, max_overflow=0)
 
 from app.modules import helper
 app.before_request(helper.before_request)

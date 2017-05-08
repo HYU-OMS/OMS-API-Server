@@ -73,6 +73,9 @@ class Menu(Resource):
         if 'price' not in body:
             return {"message": "'price' not provided!"}, 400
 
+        if len(body['name']) > 64:
+            return {"message": "Length of 'name' must be smaller than 64!"}, 400
+
         group_id = int(body['group_id'])
         price = int(body['price'])
 

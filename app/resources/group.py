@@ -74,6 +74,9 @@ class Group(Resource):
         if 'name' not in body:
             return {"message": "'name' not provided!"}, 400
 
+        if len(body['name']) > 64:
+            return {"message": "Length of 'name' must be smaller than 64!"}, 400
+
         with db_engine.connect() as connection:
             with connection.begin() as transaction:
                 query_str = "INSERT INTO `groups` SET `name` = :name, `creator_id` = :user_id, " \

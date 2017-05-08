@@ -45,6 +45,12 @@ class User(Resource):
             if not email_validator(body['email']):
                 return {"message": "Provided email is invalid!"}, 400
 
+            if len(body['name']) > 64:
+                return {"message": "Length of 'name' must be smaller than 64!"}, 400
+
+            if len(body['email']) > 64:
+                return {"message": "Length of 'email' must be smaller than 64!"}, 400
+
             name = body['name']
             email = body['email']
             password = pbkdf2_sha256.hash(body['password'])

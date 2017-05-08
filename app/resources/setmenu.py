@@ -101,6 +101,9 @@ class Setmenu(Resource):
         if isinstance(body['menu_list'], list) is False:
             return {"message": "'menu_list' must be JSON array!"}, 400
 
+        if len(body['name']) > 64:
+            return {"message": "Length of 'name' must be smaller than 64!"}, 400
+
         group_id = int(body['group_id'])
         name = body['name']
         price = int(body['price'])

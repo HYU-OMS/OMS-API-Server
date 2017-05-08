@@ -139,6 +139,9 @@ class Order(Resource):
         if isinstance(body['setmenu_list'], list) is False:
             return {"message": "'setmenu_list' must be JSON array!"}, 400
 
+        if len(body['table_id']) > 64:
+            return {"message": "Length of 'table_id' must be smaller than 64!"}, 400
+
         group_id = int(body['group_id'])
         table_id = body['table_id']
         menu_list = body['menu_list']
