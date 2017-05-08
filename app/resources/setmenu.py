@@ -10,7 +10,14 @@ setmenu_get_success = api.model('Setmenu_Get_Success', {
         "id": "메뉴 고유번호",
         "name": "메뉴 이름",
         "price": "메뉴 가격",
-        "is_enabled": "현재 주문 가능한지 여부"
+        "is_enabled": "현재 주문 가능한지 여부",
+        "menu_list": [
+            {
+                "id": "메뉴 고유번호",
+                "name": "메뉴 이름",
+                "amount": "이 세트메뉴에 포함된 갯수"
+            }
+        ]
     }))
 })
 setmenu_post_payload = api.model('Setmenu_Post_Payload', {
@@ -29,6 +36,7 @@ setmenu_put_payload = api.model('Setmenu_Put_Payload', {
     "price": fields.Integer("세트메뉴 가격"),
     "is_enabled": fields.Integer("주문가능여부 (0: 불가, 1: 가능)")
 })
+
 
 @ns.route('')
 @ns.param("jwt", "로그인 시 얻은 JWT를 입력", _in="query", required=True)
@@ -57,8 +65,10 @@ class Setmenu(Resource):
             setmenu_list = [dict(row) for row in query]
 
             for setmenu in setmenu_list:
-                query_str = "SELECT `id`, `name`, `price` FROM `menus` " \
-                            "WHERE `id` = ANY(SELECT `menu_id` FROM `set_contents` WHERE `set_id` = :set_id)"
+                query_str = "SELECT `menus`.`id`, `menus`.`name`, `set_contents`.`amount` " \
+                            "FROM `menus` JOIN `set_contents` ON `menus`.`id` = `set_contents`.`menu_id` " \
+                            "WHERE `menus`.`id` = ANY(SELECT `menu_id` FROM `set_contents` WHERE `set_id` = :set_id) " \
+                            "AND `set_contents`.`set_id` = :set_id"
                 query = connection.execute(text(query_str), set_id=setmenu['id'])
 
                 menu_list = [dict(row) for row in query]
@@ -141,35 +151,6 @@ class Setmenu(Resource):
 @ns.route('/<int:setmenu_id>')
 @ns.param("jwt", "로그인 시 얻은 JWT를 입력", _in="query", required=True)
 class SetmenuEach(Resource):
-    @ns.response(200, "세트메뉴 구성 목록 조회 성공", model=setmenu_each_get_success)
-    def get(self, setmenu_id):
-        if request.user_info is None:
-            return {"message": "JWT must be provided!"}, 401
-
-        with db_engine.connect() as connection:
-            query_str = "SELECT * FROM `setmenus` WHERE `id` = :setmenu_id"
-            set_basic_info = connection.execute(text(query_str), setmenu_id=setmenu_id).first()
-
-            if set_basic_info is None:
-                return {"message": "Requested 'setmenu_id' not found!"}, 404
-
-            group_id = int(set_basic_info['group_id'])
-
-            query_str = "SELECT * FROM `members` WHERE `group_id` = :group_id AND `user_id` = :user_id"
-            chk_member = connection.execute(text(query_str), group_id=group_id, user_id=request.user_info['id']).first()
-
-            if chk_member is None:
-                return {"message": "Only member of this group can get setmenu info!"}, 403
-
-            query_str = "SELECT `menus`.`name`, `set_contents`.`amount` FROM `menus` " \
-                        "JOIN `set_contents` ON `menus`.`id` = `set_contents`.`menu_id` " \
-                        "WHERE `set_contents`.`set_id` = :setmenu_id"
-            query = connection.execute(text(query_str), setmenu_id=setmenu_id)
-
-            setmenu_info = [dict(row) for row in query]
-
-        return {"list": setmenu_info}, 200
-
     @ns.doc(body=setmenu_put_payload)
     @ns.response(200, "세트메뉴 정보 변경 성공")
     def put(self, setmenu_id):
