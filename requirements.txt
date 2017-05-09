@@ -4,6 +4,5 @@ sqlalchemy
 flask-cors
 PyJWT
 PyMySQL
-passlib
-lepl
 flask-restplus
+requests

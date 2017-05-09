@@ -25,6 +25,9 @@ group_get_success = api.model('Group_Get_Success', {
         'current': "현재 선택된 page면 true, 아닐 경우 false"
     }))
 })
+group_put_payload = api.model('Group_Put_Payload', {
+    'signup_code': fields.String("그룹 가입 인증 코드 (최대길이 64, null일 경우 신규회원을 받지 않는 상태)")
+})
 
 
 @ns.route('')
@@ -41,13 +44,13 @@ class Group(Resource):
 
         with db_engine.connect() as connection:
             fetch_query = " SELECT `groups`.`id`, `groups`.`name`, `groups`.`creator_id`, `members`.`role`, " \
-                          "`groups`.`created_at` FROM `groups` " \
+                          "`groups`.`signup_code`, `groups`.`created_at` FROM `groups` " \
                           "JOIN `members` ON `groups`.`id` = `members`.`group_id` " \
                           "WHERE `members`.`user_id` = :user_id "
             count_query = "SELECT COUNT(`groups`.`id`) AS `cnt` FROM `groups` " \
                           "JOIN `members` ON `groups`.`id` = `members`.`group_id` " \
                           "WHERE `members`.`user_id` = :user_id "
-            order_query = " ORDER BY `groups`.`id` DESC "
+            order_query = " ORDER BY `groups`.`id` ASC "
 
             result, paging = Pagination(fetch=fetch_query,
                                         count=count_query,
@@ -92,3 +95,39 @@ class Group(Resource):
                                            cur_time=datetime.utcnow())
 
         return {"group_id": new_group_id}, 201
+
+
+@ns.route('/<int:group_id>')
+@ns.param("jwt", "로그인 시 얻은 JWT를 입력", _in="query", required=True)
+class GroupEach(Resource):
+    @ns.doc(body=group_put_payload)
+    @ns.response(200, "그룹 가입 정보 업데이트 성공")
+    def put(self, group_id):
+        if request.user_info is None:
+            return {"message": "JWT must be provided!"}, 401
+
+        body = request.get_json(silent=True, force=True)
+        if body is None:
+            return {"message": "Unable to get json post data!"}, 400
+
+        signup_code = None
+        if 'signup_code' in body and body['code'] != "":
+            signup_code = body['signup_code']
+
+        with db_engine.connect() as connection:
+            query_str = "SELECT * FROM `groups` WHERE `id` = :group_id"
+            chk_group = connection.execute(text(query_str), group_id=group_id).first()
+
+            if chk_group is None:
+                return {"message": "Requested 'group_id' not found!"}, 404
+
+            if int(chk_group['creator_id']) != int(request.user_info['id']):
+                return {"message": "Only creator of this group can update signup code!"}, 403
+
+            with connection.begin() as transaction:
+                query_str = "UPDATE `groups` SET `signup_code` = :signup_code, `updated_at` = :cur_time " \
+                            "WHERE `id` = :group_id"
+                query = connection.execute(text(query_str), signup_code=signup_code,
+                                           group_id=group_id, cur_time=datetime.utcnow())
+
+        return {"group_id": group_id, "code": signup_code}, 201

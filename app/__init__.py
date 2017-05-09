@@ -29,6 +29,7 @@ app.before_request(helper.before_request)
 from app.resources import *
 api.add_resource(user.User, '/user')
 api.add_resource(group.Group, '/group')
+api.add_resource(group.GroupEach, '/group/<int:group_id>')
 api.add_resource(member.Member, '/member')
 api.add_resource(menu.Menu, '/menu')
 api.add_resource(menu.MenuEach, '/menu/<int:menu_id>')
