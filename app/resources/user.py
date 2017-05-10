@@ -43,18 +43,18 @@ class User(Resource):
                 return {"message": content['msg']}, status_code
 
             with db_engine.connect() as connection:
-                query_str = "SELECT * FROM `users` WHERE `kakako_id` = :kakako_id"
-                chk_user = connection.execute(text(query_str), kakako_id=content['id']).first()
+                query_str = "SELECT * FROM `users` WHERE `kakao_id` = :kakao_id"
+                chk_user = connection.execute(text(query_str), kakao_id=content['id']).first()
 
                 if chk_user is None:
                     with connection.begin() as transaction:
-                        query_str = "INSERT INTO `users` SET `name` = :name, `kakako_id` = :kakako_id, " \
+                        query_str = "INSERT INTO `users` SET `name` = :name, `kakao_id` = :kakao_id, " \
                                     "`verified` = 1, `created_at` = :cur_time, `updated_at` = :cur_time"
                         query = connection.execute(text(query_str), name=content['properties']['nickname'],
-                                                   kakako_id=content['id'], cur_time=datetime.utcnow())
+                                                   kakao_id=content['id'], cur_time=datetime.utcnow())
 
-                    query_str = "SELECT * FROM `users` WHERE `kakako_id` = :kakako_id"
-                    chk_user = connection.execute(text(query_str), kakako_id=content['id']).first()
+                    query_str = "SELECT * FROM `users` WHERE `kakao_id` = :kakao_id"
+                    chk_user = connection.execute(text(query_str), kakao_id=content['id']).first()
 
                 if chk_user['enabled'] != 1:
                     return {"message": "This account has been disabled. Please contact system administrator!"}
