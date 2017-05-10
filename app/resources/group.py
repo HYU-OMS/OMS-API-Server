@@ -111,8 +111,8 @@ class GroupEach(Resource):
             return {"message": "Unable to get json post data!"}, 400
 
         signup_code = None
-        if 'signup_code' in body and body['code'] != "":
-            signup_code = body['signup_code']
+        if 'code' in body and body['code'] != "":
+            signup_code = body['code']
 
         with db_engine.connect() as connection:
             query_str = "SELECT * FROM `groups` WHERE `id` = :group_id"
