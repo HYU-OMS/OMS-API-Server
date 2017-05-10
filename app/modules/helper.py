@@ -30,7 +30,6 @@ def before_request():
 
             if result is not None:
                 result = dict(result)
-                del result['password']
 
                 request.user_info = result
 
