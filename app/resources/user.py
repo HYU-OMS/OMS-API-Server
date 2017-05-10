@@ -42,21 +42,23 @@ class User(Resource):
             if not res.ok:
                 return {"message": content['msg']}, status_code
 
+            kakao_id = int(content['id'])
+
             with db_engine.connect() as connection:
                 query_str = "SELECT * FROM `users` WHERE `kakao_id` = :kakao_id"
-                chk_user = connection.execute(text(query_str), kakao_id=content['id']).first()
+                chk_user = connection.execute(text(query_str), kakao_id=kakao_id).first()
 
                 if chk_user is None:
                     with connection.begin() as transaction:
                         query_str = "INSERT INTO `users` SET `name` = :name, `kakao_id` = :kakao_id, " \
                                     "`created_at` = :cur_time, `updated_at` = :cur_time"
                         query = connection.execute(text(query_str), name=content['properties']['nickname'],
-                                                   kakao_id=content['id'], cur_time=datetime.utcnow())
+                                                   kakao_id=kakao_id, cur_time=datetime.utcnow())
 
                     query_str = "SELECT * FROM `users` WHERE `kakao_id` = :kakao_id"
-                    chk_user = connection.execute(text(query_str), kakao_id=content['id']).first()
+                    chk_user = connection.execute(text(query_str), kakao_id=kakao_id).first()
 
-                if chk_user['enabled'] != 1:
+                if int(chk_user['enabled']) != 1:
                     return {"message": "This account has been disabled. Please contact system administrator!"}
 
             return {
@@ -84,21 +86,23 @@ class User(Resource):
             if not res.ok:
                 return content['error'], status_code
 
+            fb_id = int(content['id'])
+
             with db_engine.connect() as connection:
                 query_str = "SELECT * FROM `users` WHERE `fb_id` = :fb_id"
-                chk_user = connection.execute(text(query_str), fb_id=content['id']).first()
+                chk_user = connection.execute(text(query_str), fb_id=fb_id).first()
 
                 if chk_user is None:
                     with connection.begin() as transaction:
                         query_str = "INSERT INTO `users` SET `name` = :name, `fb_id` = :fb_id, " \
                                     "`created_at` = :cur_time, `updated_at` = :cur_time"
                         query = connection.execute(text(query_str), name=content['name'],
-                                                   fb_id=content['id'], cur_time=datetime.utcnow())
+                                                   fb_id=fb_id, cur_time=datetime.utcnow())
 
                     query_str = "SELECT * FROM `users` WHERE `fb_id` = :fb_id"
-                    chk_user = connection.execute(text(query_str), fb_id=content['id']).first()
+                    chk_user = connection.execute(text(query_str), fb_id=fb_id).first()
 
-                if chk_user['enabled'] != 1:
+                if int(chk_user['enabled']) != 1:
                     return {"message": "This account has been disabled. Please contact system administrator!"}
 
             return {
