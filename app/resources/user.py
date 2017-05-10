@@ -49,7 +49,7 @@ class User(Resource):
                 if chk_user is None:
                     with connection.begin() as transaction:
                         query_str = "INSERT INTO `users` SET `name` = :name, `kakao_id` = :kakao_id, " \
-                                    "`verified` = 1, `created_at` = :cur_time, `updated_at` = :cur_time"
+                                    "`created_at` = :cur_time, `updated_at` = :cur_time"
                         query = connection.execute(text(query_str), name=content['properties']['nickname'],
                                                    kakao_id=content['id'], cur_time=datetime.utcnow())
 
@@ -90,7 +90,7 @@ class User(Resource):
 
                 if chk_user is None:
                     with connection.begin() as transaction:
-                        query_str = "INSERT INTO `users` SET `name` = :name, `fb_id` = :fb_id, `verified` = 1, " \
+                        query_str = "INSERT INTO `users` SET `name` = :name, `fb_id` = :fb_id, " \
                                     "`created_at` = :cur_time, `updated_at` = :cur_time"
                         query = connection.execute(text(query_str), name=content['name'],
                                                    fb_id=content['id'], cur_time=datetime.utcnow())
