@@ -29,8 +29,8 @@ class User(Resource):
             return {"message": "Unable to get json post data!"}, 400
 
         if request.args['type'] == 'kakao':
-            if 'access_token' not in body:
-                return {"message": "'access_token' not provided!"}, 400
+            if 'accessToken' not in body:
+                return {"message": "'accessToken' not provided!"}, 400
 
             kakao_access_token = body['accessToken']
 
