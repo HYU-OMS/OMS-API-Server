@@ -6,3 +6,4 @@ PyJWT
 PyMySQL
 flask-restplus
 requests
+uwsgi
