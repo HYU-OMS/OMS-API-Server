@@ -15,21 +15,21 @@ def before_request():
         try:
             decoded_token = jwt.decode(jwt=token, key=app.config['JWT_SECRET_KEY'], verify=True)
         except jwt.exceptions.DecodeError as err:
-            return make_response(jsonify({
-                "message": "Failed to decode jwt!"
-            }), 401)
+            return make_response(jsonify({"message": "Failed to decode jwt!"}), 401)
         except jwt.exceptions.ExpiredSignatureError as err:
-            return make_response(jsonify({
-                "message": "Provided jwt has been expired!",
-            }), 401)
+            return make_response(jsonify({"message": "Provided jwt has been expired!"}), 401)
 
     if decoded_token is not None:
         with db_engine.connect() as connection:
-            query_str = "SELECT * FROM `users` WHERE `id` = :id"
+            query_str = "SELECT * FROM `users` WHERE `id` = :id AND `enabled` = 1"
             result = connection.execute(text(query_str), id=decoded_token['user_id']).fetchone()
 
-            if result is not None:
+            if result is None:
+                return make_response(jsonify({"message": "Requested user not found!"}), 404)
+            else:
                 result = dict(result)
+                if result['auth_uuid'] != decoded_token['auth_uuid']:
+                    return make_response(jsonify({"message": "Duplicate sign-in is not allowed!"}), 403)
 
                 request.user_info = result
 

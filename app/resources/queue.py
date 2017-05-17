@@ -2,7 +2,6 @@ from flask_restplus import Resource, fields
 from flask import request
 from app import db_engine, api
 from sqlalchemy import text
-from datetime import datetime
 import app.modules.helper as helper
 import json
 
@@ -107,9 +106,8 @@ class Queue(Resource):
             if chk_permission is None:
                 return {"message": "You can't update queue status!"}, 403
 
-            query_str = "UPDATE `order_transactions` SET `is_delivered` = 1, `updated_at` = :cur_time " \
+            query_str = "UPDATE `order_transactions` SET `is_delivered` = 1 " \
                         "WHERE `order_id` = :order_id AND `menu_id` = :menu_id "
-            query = connection.execute(text(query_str), cur_time=datetime.utcnow(),
-                                       order_id=order_id, menu_id=menu_id)
+            query = connection.execute(text(query_str), order_id=order_id, menu_id=menu_id)
 
         return {"order_id": order_id, "menu_id": menu_id}, 200

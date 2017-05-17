@@ -2,7 +2,6 @@ from flask_restplus import Resource, fields
 from flask import request
 from app import db_engine, api
 from sqlalchemy import text
-from datetime import datetime
 from app.modules.pagination import Pagination
 import app.modules.helper as helper
 import json
@@ -226,20 +225,19 @@ class Order(Resource):
             with connection.begin() as transaction:
                 query_str = "INSERT INTO `orders` SET `user_id` = :user_id, `group_id` = :group_id, " \
                             "`table_id` = :table_id, `total_price` = :total_price, `order_menus` = :menu_list, " \
-                            "`order_setmenus` = :setmenu_list, `created_at` = :cur_time, `updated_at` = :cur_time"
+                            "`order_setmenus` = :setmenu_list"
                 query = connection.execute(text(query_str), user_id=request.user_info['id'], group_id=group_id,
                                            table_id=table_id, total_price=total_price, menu_list=json.dumps(order_menus),
-                                           setmenu_list=json.dumps(order_setmenus), cur_time=datetime.utcnow())
+                                           setmenu_list=json.dumps(order_setmenus))
 
                 new_order_id = query.lastrowid
 
                 query_str = "INSERT INTO `order_transactions` SET `order_id` = :order_id, `menu_id` = :menu_id, " \
-                            "`amount` = :amount, `created_at` = :cur_time, `updated_at` = :cur_time"
+                            "`amount` = :amount"
 
                 for content in menu_list:
                     query = connection.execute(text(query_str), order_id=new_order_id,
-                                               menu_id=content['id'], amount=content['amount'],
-                                               cur_time=datetime.utcnow())
+                                               menu_id=content['id'], amount=content['amount'])
 
                 for content in setmenu_list:
                     setmenu_id = int(content['id'])
@@ -342,14 +340,10 @@ class OrderEach(Resource):
                 order_status = -1
 
             with connection.begin() as transaction:
-                query_str = "UPDATE `orders` SET `status` = :order_status, `updated_at` = :cur_time " \
-                            "WHERE `id` = :order_id"
-                query = connection.execute(text(query_str), order_status=order_status,
-                                           cur_time=datetime.utcnow(), order_id=order_id)
+                query_str = "UPDATE `orders` SET `status` = :order_status WHERE `id` = :order_id"
+                query = connection.execute(text(query_str), order_status=order_status, order_id=order_id)
 
-                query_str = "UPDATE `order_transactions` SET `is_approved` = :is_approved, `updated_at` = :cur_time " \
-                            "WHERE `order_id` = :order_id"
-                query = connection.execute(text(query_str), is_approved=is_approved,
-                                           cur_time=datetime.utcnow(), order_id=order_id)
+                query_str = "UPDATE `order_transactions` SET `is_approved` = :is_approved WHERE `order_id` = :order_id"
+                query = connection.execute(text(query_str), is_approved=is_approved, order_id=order_id)
 
         return {"order_id": order_id, "is_approved": is_approved}, 200

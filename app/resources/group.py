@@ -2,7 +2,6 @@ from flask_restplus import Resource, fields
 from flask import request
 from app import db_engine, api
 from sqlalchemy import text
-from datetime import datetime
 from app.modules.pagination import Pagination
 import app.modules.helper as helper
 import json
@@ -46,7 +45,7 @@ class Group(Resource):
             fetch_query = " SELECT `groups`.`id`, `groups`.`name`, `groups`.`creator_id`, `members`.`role`, " \
                           "`groups`.`signup_code`, `groups`.`created_at` FROM `groups` " \
                           "JOIN `members` ON `groups`.`id` = `members`.`group_id` " \
-                          "WHERE `members`.`user_id` = :user_id "
+                          "WHERE `members`.`user_id` = :user_id AND `groups`.`is_enabled` = 1 "
             count_query = "SELECT COUNT(`groups`.`id`) AS `cnt` FROM `groups` " \
                           "JOIN `members` ON `groups`.`id` = `members`.`group_id` " \
                           "WHERE `members`.`user_id` = :user_id "
@@ -82,17 +81,13 @@ class Group(Resource):
 
         with db_engine.connect() as connection:
             with connection.begin() as transaction:
-                query_str = "INSERT INTO `groups` SET `name` = :name, `creator_id` = :user_id, " \
-                            "`created_at` = :cur_time, `updated_at` = :cur_time"
-                query = connection.execute(text(query_str), name=body['name'], user_id=request.user_info['id'],
-                                           cur_time=datetime.utcnow())
+                query_str = "INSERT INTO `groups` SET `name` = :name, `creator_id` = :user_id"
+                query = connection.execute(text(query_str), name=body['name'], user_id=request.user_info['id'])
 
                 new_group_id = query.lastrowid
 
-                query_str = "INSERT INTO `members` SET `group_id` = :group_id, `user_id` = :user_id, `role` = '2', " \
-                            "`created_at` = :cur_time, `updated_at` = :cur_time"
-                query = connection.execute(text(query_str), group_id=new_group_id, user_id=request.user_info['id'],
-                                           cur_time=datetime.utcnow())
+                query_str = "INSERT INTO `members` SET `group_id` = :group_id, `user_id` = :user_id, `role` = '2'"
+                query = connection.execute(text(query_str), group_id=new_group_id, user_id=request.user_info['id'])
 
         return {"group_id": new_group_id}, 201
 
@@ -125,9 +120,31 @@ class GroupEach(Resource):
                 return {"message": "Only creator of this group can update signup code!"}, 403
 
             with connection.begin() as transaction:
-                query_str = "UPDATE `groups` SET `signup_code` = :signup_code, `updated_at` = :cur_time " \
-                            "WHERE `id` = :group_id"
-                query = connection.execute(text(query_str), signup_code=signup_code,
-                                           group_id=group_id, cur_time=datetime.utcnow())
+                query_str = "UPDATE `groups` SET `signup_code` = :signup_code WHERE `id` = :group_id"
+                query = connection.execute(text(query_str), signup_code=signup_code, group_id=group_id)
 
         return {"group_id": group_id, "code": signup_code}, 201
+
+    @ns.response(200, "해당 그룹을 성공적으로 비활성화함.")
+    def delete(self, group_id):
+        if request.user_info is None:
+            return {"message": "JWT must be provided!"}, 401
+
+        with db_engine.connect() as connection:
+            query_str = "SELECT * FROM `groups` WHERE `id` = :group_id"
+            chk_group = connection.execute(text(query_str), group_id=group_id).first()
+
+            if chk_group is None:
+                return {"message": "Requested 'group_id' not found!"}, 404
+
+            if int(chk_group['creator_id']) != int(request.user_info['id']):
+                return {"message": "Only creator of this group can delete it!"}, 403
+
+            with connection.begin() as transaction:
+                query_str = "UPDATE `groups` SET `is_enabled` = 0 WHERE `id` = :group_id"
+                query = connection.execute(text(query_str), group_id=group_id)
+
+                query_str = "DELETE FROM `members` WHERE `group_id` = :group_id"
+                query = connection.execute(text(query_str), group_id=group_id)
+
+        return {"group_id": group_id}, 200

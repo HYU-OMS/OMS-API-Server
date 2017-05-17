@@ -2,7 +2,6 @@ from flask_restplus import Resource, fields
 from flask import request
 from app import db_engine, api
 from sqlalchemy import text
-from datetime import datetime
 
 
 ns = api.namespace('menu', description="메뉴 관련 API (메뉴 조회, 새로 추가, 가격 및 상태 변경)")
@@ -87,11 +86,9 @@ class Menu(Resource):
             if chk_permission is None:
                 return {"message": "You can't add menu in this group!"}, 403
 
-            query_str = "INSERT INTO `menus` SET `name` = :name, `price` = :price, `group_id` = :group_id," \
-                        "`created_at` = :cur_time, `updated_at` = :cur_time"
+            query_str = "INSERT INTO `menus` SET `name` = :name, `price` = :price, `group_id` = :group_id"
 
-            query = connection.execute(text(query_str), name=body['name'], price=price, group_id=group_id,
-                                       cur_time=datetime.utcnow())
+            query = connection.execute(text(query_str), name=body['name'], price=price, group_id=group_id)
 
             new_menu_id = query.lastrowid
 
@@ -137,10 +134,8 @@ class MenuEach(Resource):
                 return {"message": "You can't update menu in this group!"}, 403
 
             with connection.begin() as transaction:
-                query_str = "UPDATE `menus` SET `price` = :price, `is_enabled` = :is_enabled, " \
-                            "`updated_at` = :cur_time WHERE `id` = :menu_id"
-                query = connection.execute(text(query_str), price=price, is_enabled=is_enabled,
-                                           cur_time=datetime.utcnow(), menu_id=menu_id)
+                query_str = "UPDATE `menus` SET `price` = :price, `is_enabled` = :is_enabled WHERE `id` = :menu_id"
+                query = connection.execute(text(query_str), price=price, is_enabled=is_enabled, menu_id=menu_id)
 
                 if is_enabled == 0:
                     query_str = "SELECT * FROM `set_contents` WHERE `menu_id` = :menu_id"
@@ -149,9 +144,7 @@ class MenuEach(Resource):
                     set_contents = [dict(row) for row in query]
 
                     for set_content in set_contents:
-                        query_str = "UPDATE `setmenus` SET `is_enabled` = 0, `updated_at` = :cur_time " \
-                                    "WHERE `id` = :setmenu_id"
-                        query = connection.execute(text(query_str), cur_time=datetime.utcnow(),
-                                                   setmenu_id=set_content['set_id'])
+                        query_str = "UPDATE `setmenus` SET `is_enabled` = 0 WHERE `id` = :setmenu_id"
+                        query = connection.execute(text(query_str), setmenu_id=set_content['set_id'])
 
         return {"menu_id": menu_id}, 200

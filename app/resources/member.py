@@ -2,7 +2,6 @@ from flask_restplus import Resource, fields
 from flask import request
 from app import db_engine, api
 from sqlalchemy import text
-from datetime import datetime
 
 
 ns = api.namespace('member', description="멤버 관련 API (목록 조회, 새로 추가, 권한 변경)")
@@ -96,10 +95,8 @@ class Member(Resource):
                     return {"message": "Already a member of this group!"}, 403
 
                 with connection.begin() as transaction:
-                    query_str = "INSERT INTO `members` SET `group_id` = :group_id, `user_id` = :user_id, `role` = 0, " \
-                                "`created_at` = :cur_time, `updated_at` = :cur_time"
-                    query = connection.execute(text(query_str), group_id=group_id, user_id=request.user_info['id'],
-                                               cur_time=datetime.utcnow())
+                    query_str = "INSERT INTO `members` SET `group_id` = :group_id, `user_id` = :user_id, `role` = 0"
+                    query = connection.execute(text(query_str), group_id=group_id, user_id=request.user_info['id'])
             else:
                 return {"message": "Requested 'group_id' and 'signup_code' mismatch!"}, 403
 
@@ -151,10 +148,8 @@ class Member(Resource):
             if chk_creator is not None:
                 return {"message": "Can't change role of group creator!"}, 403
 
-            query_str = "UPDATE `members` SET `role` = :role, `updated_at` = :cur_time" \
-                        " WHERE `group_id` = :group_id AND `user_id` = :user_id"
-            query = connection.execute(text(query_str), role=role, cur_time=datetime.utcnow(),
-                                       group_id=group_id, user_id=user_id)
+            query_str = "UPDATE `members` SET `role` = :role WHERE `group_id` = :group_id AND `user_id` = :user_id"
+            query = connection.execute(text(query_str), role=role, group_id=group_id, user_id=user_id)
 
         return {
             "group_id": group_id,

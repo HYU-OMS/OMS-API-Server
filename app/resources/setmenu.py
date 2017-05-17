@@ -2,7 +2,6 @@ from flask_restplus import Resource, fields
 from flask import request
 from app import db_engine, api
 from sqlalchemy import text
-from datetime import datetime
 
 ns = api.namespace('setmenu', description="세트메뉴 관련 API (세트메뉴 조회, 새로 추가, 가격 및 상태 변경)")
 setmenu_get_success = api.model('Setmenu_Get_Success', {
@@ -135,10 +134,8 @@ class Setmenu(Resource):
                     return {"message": "Invalid 'menu_id' for this group!"}, 403
 
             with connection.begin() as transaction:
-                query_str = "INSERT INTO `setmenus` SET `name` = :name, `price` = :price, `group_id` = :group_id," \
-                            "`created_at` = :cur_time, `updated_at` = :cur_time"
-                query = connection.execute(text(query_str), name=name, price=price, group_id=group_id,
-                                           cur_time=datetime.utcnow())
+                query_str = "INSERT INTO `setmenus` SET `name` = :name, `price` = :price, `group_id` = :group_id"
+                query = connection.execute(text(query_str), name=name, price=price, group_id=group_id)
 
                 new_setmenu_id = query.lastrowid
 
@@ -189,9 +186,7 @@ class SetmenuEach(Resource):
             if check_permission is None:
                 return {"message": "You can't update setmenu in this group!"}, 403
 
-            query_str = "UPDATE `setmenus` SET `price` = :price, `is_enabled` = :is_enabled, `updated_at` = :cur_time " \
-                        "WHERE `id` = :setmenu_id"
-            query = connection.execute(text(query_str), price=price, is_enabled=is_enabled,
-                                       cur_time=datetime.utcnow(), setmenu_id=setmenu_id)
+            query_str = "UPDATE `setmenus` SET `price` = :price, `is_enabled` = :is_enabled WHERE `id` = :setmenu_id"
+            query = connection.execute(text(query_str), price=price, is_enabled=is_enabled, setmenu_id=setmenu_id)
 
         return {"setmenu_id": setmenu_id}, 200
