@@ -78,7 +78,7 @@ class Member(Resource):
         signup_code = body['signup_code']
 
         with db_engine.connect() as connection:
-            query_str = "SELECT * FROM `groups` WHERE `id` = :group_id"
+            query_str = "SELECT * FROM `groups` WHERE `id` = :group_id AND `is_enabled` = 1"
             chk_group = connection.execute(text(query_str), group_id=group_id).first()
 
             if chk_group is None:
