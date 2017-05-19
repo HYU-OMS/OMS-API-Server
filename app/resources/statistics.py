@@ -63,7 +63,7 @@ class Statistics(Resource):
             query_str = "SELECT SUM(`total_price`) AS `total_sales_price` FROM `orders` " \
                         "WHERE `group_id` = :group_id AND `status` = 1"
             query = connection.execute(text(query_str), group_id=group_id).first()
-            total_sales_price = int(query['total_sales_price'])
+            total_sales_price = int(query['total_sales_price']) if query['total_sales_price'] is not None else 0
 
             query_str = "SELECT `users`.`name`, `orders`.`user_id`, COUNT(`orders`.`id`) AS `cnt` FROM `orders` " \
                         "JOIN `users` ON `users`.`id` = `orders`.`user_id` " \
@@ -75,7 +75,7 @@ class Statistics(Resource):
 
             query_str = "SELECT CAST(((UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(`created_at`)) / 3600) AS UNSIGNED) " \
                         "AS `time_elapsed`, COUNT(`id`) AS `cnt` FROM `orders` " \
-                        "WHERE `group_id` = 1 AND `status` = 1 " \
+                        "WHERE `group_id` = :group_id AND `status` = 1 " \
                         "AND UNIX_TIMESTAMP(`created_at`) > (UNIX_TIMESTAMP(NOW()) - 86400) " \
                         "GROUP BY `time_elapsed`"
             query = connection.execute(text(query_str), group_id=group_id)
