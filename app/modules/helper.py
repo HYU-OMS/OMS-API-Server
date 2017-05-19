@@ -3,6 +3,7 @@ from app import db_engine, app
 from sqlalchemy import text
 import jwt
 from datetime import datetime, timezone
+from decimal import Decimal
 
 
 # Request 요청 시 사전 수행 작업 (DB connection 생성 및 JWT 확인)
@@ -50,4 +51,9 @@ def json_serial(obj):
     if isinstance(obj, datetime):
         serial = obj.replace(tzinfo=timezone.utc).isoformat()
         return serial
-    raise TypeError ("Type not serializable")
+
+    if isinstance(obj, Decimal):
+        serial = round(float(str(obj)))
+        return serial
+
+    raise TypeError("Type not serializable")

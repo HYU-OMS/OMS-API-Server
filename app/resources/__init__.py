@@ -5,5 +5,6 @@ __all__ = [
     "order",
     "queue",
     "setmenu",
-    "user"
+    "user",
+    "statistics"
 ]
