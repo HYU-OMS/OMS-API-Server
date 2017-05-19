@@ -54,7 +54,8 @@ class Statistics(Resource):
             query = connection.execute(text(query_str), group_id=group_id)
             sales_per_menu = [dict(row) for row in query]
 
-            query_str = "SELECT `menu_id`, AVG(`updated_at` - `created_at`) AS `avg_delay` FROM `order_transactions` " \
+            query_str = "SELECT `menu_id`, AVG(UNIX_TIMESTAMP(`updated_at`) - UNIX_TIMESTAMP(`created_at`)) " \
+                        "AS `avg_delay` FROM `order_transactions` " \
                         "WHERE `group_id` = :group_id AND `is_delivered` = 1 GROUP BY `menu_id`"
             query = connection.execute(text(query_str), group_id=group_id)
             delays_per_menu = [dict(row) for row in query]
