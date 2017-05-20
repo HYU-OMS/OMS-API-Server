@@ -54,8 +54,9 @@ class Statistics(Resource):
                 query = connection.execute(text(query_str), group_id=group_id)
                 sales_per_menu = [dict(row) for row in query]
 
-                query_str = "SELECT `menu_id`, AVG(UNIX_TIMESTAMP(`updated_at`) - UNIX_TIMESTAMP(`created_at`)) " \
-                            "AS `avg_delay` FROM `order_transactions` " \
+                query_str = "SELECT `menu_id`, " \
+                            "CAST(AVG((UNIX_TIMESTAMP(`updated_at`) - UNIX_TIMESTAMP(`created_at`)) / `amount`) " \
+                            "AS UNSIGNED) AS `avg_delay` FROM `order_transactions` " \
                             "WHERE `group_id` = :group_id AND `is_delivered` = 1 GROUP BY `menu_id`"
                 query = connection.execute(text(query_str), group_id=group_id)
                 delays_per_menu = [dict(row) for row in query]
@@ -73,8 +74,8 @@ class Statistics(Resource):
                 query = connection.execute(text(query_str), group_id=group_id)
                 order_rank_list = [dict(row) for row in query]
 
-                query_str = "SELECT CAST(((UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(`created_at`)) / 3600) AS UNSIGNED) " \
-                            "AS `time_elapsed`, COUNT(`id`) AS `cnt` FROM `orders` " \
+                query_str = "SELECT CAST(((UNIX_TIMESTAMP(NOW()) - UNIX_TIMESTAMP(`created_at`)) / 3600) " \
+                            "AS UNSIGNED) AS `time_elapsed`, COUNT(`id`) AS `cnt` FROM `orders` " \
                             "WHERE `group_id` = :group_id AND `status` = 1 " \
                             "AND UNIX_TIMESTAMP(`created_at`) > (UNIX_TIMESTAMP(NOW()) - 86400) " \
                             "GROUP BY `time_elapsed`"
