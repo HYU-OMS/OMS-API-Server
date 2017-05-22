@@ -252,11 +252,22 @@ class Order(Resource):
                         menu_id = int(each_data['menu_id'])
                         menu_amount = int(each_data['amount'])
 
-                        query_str = "UPDATE `order_transactions` SET `amount` = `amount` + :amount " \
+                        query_str = "SELECT * FROM `order_transactions` " \
                                     "WHERE `order_id` = :order_id AND `menu_id` = :menu_id"
-                        query = connection.execute(text(query_str),
-                                                   amount=(menu_amount * set_amount),
-                                                   order_id=new_order_id, menu_id=menu_id)
+                        chk_if_exists = connection.execute(text(query_str), order_id=new_order_id, menu_id=menu_id)
+
+                        if chk_if_exists is None:
+                            query_str = "INSERT INTO `order_transactions` SET " \
+                                        "`order_id` = :order_id, `menu_id` = :menu_id, `amount` = :amount"
+                            query = connection.execute(text(query_str),
+                                                       amount=(menu_amount * set_amount),
+                                                       order_id=new_order_id, menu_id=menu_id)
+                        else:
+                            query_str = "UPDATE `order_transactions` SET `amount` = `amount` + :amount " \
+                                        "WHERE `order_id` = :order_id AND `menu_id` = :menu_id"
+                            query = connection.execute(text(query_str),
+                                                       amount=(menu_amount * set_amount),
+                                                       order_id=new_order_id, menu_id=menu_id)
 
                 query_str = "UPDATE `order_transactions` SET `group_id` = :group_id, `table_id` = :table_id " \
                             "WHERE `order_id` = :order_id"
