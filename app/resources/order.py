@@ -254,7 +254,8 @@ class Order(Resource):
 
                         query_str = "SELECT * FROM `order_transactions` " \
                                     "WHERE `order_id` = :order_id AND `menu_id` = :menu_id"
-                        chk_if_exists = connection.execute(text(query_str), order_id=new_order_id, menu_id=menu_id)
+                        chk_if_exists = connection.execute(text(query_str),
+                                                           order_id=new_order_id, menu_id=menu_id).first()
 
                         if chk_if_exists is None:
                             query_str = "INSERT INTO `order_transactions` SET " \
