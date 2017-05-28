@@ -39,4 +39,4 @@ api.add_resource(order.Order, '/order')
 api.add_resource(order.OrderEach, '/order/<int:order_id>')
 api.add_resource(queue.Queue, '/queue')
 api.add_resource(statistics.Statistics, '/statistics')
-
+api.add_resource(download.Download, '/download')
