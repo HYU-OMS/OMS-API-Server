@@ -26,12 +26,13 @@ class Download(Resource):
             group_id = int(request.args['group_id'])
 
             with db_engine.connect() as connection:
-                query_str = "SELECT * FROM `groups` WHERE `id` = :group_id AND `creator_id` = :creator_id"
+                query_str = "SELECT * FROM `members` " \
+                            "WHERE `group_id` = :group_id AND `user_id` = :user_id AND `role` = 2"
                 chk_if_creator = connection.execute(text(query_str), group_id=group_id,
-                                                    creator_id=request.user_info['id']).first()
+                                                    user_id=request.user_info['id']).first()
 
                 if chk_if_creator is None:
-                    return {"message": "Only creator of this group can get order list data!"}, 403
+                    return {"message": "Unable to get order list data! (Permission denied)"}, 403
 
                 query_str = "SELECT `id`, `order_menus`, `order_setmenus`, " \
                             "`table_id`, `total_price`, `created_at`, `updated_at` " \
