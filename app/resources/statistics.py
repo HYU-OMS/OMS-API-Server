@@ -9,13 +9,12 @@ ns = api.namespace('statistics', description="통계 API")
 statistics_get_success = api.model('Statistics_Get_Success', {
     "sales_per_menu": fields.List(fields.Raw({
         "menu_id": "메뉴 고유번호",
-        "cnt": "메뉴별 판매 수량 합"
+        "cnt": "메뉴별 판매 비율"
     })),
     "delays_per_menu": fields.List(fields.Raw({
         'menu_id': "각 메뉴의 고유번호",
         'avg_delay': '메뉴별 대기열 처리 평균 시간'
     })),
-    "total_sales_price": fields.Integer("총 판매금액 합계"),
     "order_rank_list": fields.List(fields.Raw({
         'name': "유저 이름",
         'user_id': "유저 고유번호",
@@ -54,17 +53,19 @@ class Statistics(Resource):
                 query = connection.execute(text(query_str), group_id=group_id)
                 sales_per_menu = [dict(row) for row in query]
 
+                total_sales_count = 0
+                for each_menu_data in sales_per_menu:
+                    total_sales_count += int(each_menu_data['cnt'])
+
+                for each_menu_data in sales_per_menu:
+                    each_menu_data['cnt'] = round(float(each_menu_data['cnt']) / float(total_sales_count) * 100.0)
+
                 query_str = "SELECT `menu_id`, " \
                             "CAST(AVG((UNIX_TIMESTAMP(`updated_at`) - UNIX_TIMESTAMP(`created_at`)) / `amount`) " \
                             "AS UNSIGNED) AS `avg_delay` FROM `order_transactions` " \
                             "WHERE `group_id` = :group_id AND `is_delivered` = 1 GROUP BY `menu_id`"
                 query = connection.execute(text(query_str), group_id=group_id)
                 delays_per_menu = [dict(row) for row in query]
-
-                query_str = "SELECT SUM(`total_price`) AS `total_sales_price` FROM `orders` " \
-                            "WHERE `group_id` = :group_id AND `status` = 1"
-                query = connection.execute(text(query_str), group_id=group_id).first()
-                total_sales_price = int(query['total_sales_price']) if query['total_sales_price'] is not None else 0
 
                 query_str = "SELECT `users`.`name`, `orders`.`user_id`, COUNT(`orders`.`id`) AS `cnt` FROM `orders` " \
                             "JOIN `users` ON `users`.`id` = `orders`.`user_id` " \
@@ -85,7 +86,6 @@ class Statistics(Resource):
                 result = json.loads(str(json.dumps({
                     "sales_per_menu": sales_per_menu,
                     "delays_per_menu": delays_per_menu,
-                    "total_sales_price": total_sales_price,
                     "order_rank_list": order_rank_list,
                     "order_status_per_hour": order_status_per_hour
                 }, default=helper.json_serial)))
