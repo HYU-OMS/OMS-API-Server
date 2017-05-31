@@ -4,7 +4,7 @@ from app import db_engine
 
 
 class Pagination:
-    def __init__(self, fetch, count, order, current_page, connection=None, list_num=20, page_num=10, fetch_params=None):
+    def __init__(self, fetch, count, order, current_page, connection=None, list_num=10, page_num=4, fetch_params=None):
         self.connection = connection
         self.sql_query = {'count': count, 'fetch': fetch, 'order': order}
         self.list_num = int(list_num)
