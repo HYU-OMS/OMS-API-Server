@@ -1,4 +1,4 @@
-# OMS-API-Server
+# HYU-OMS API Version 2
 주문관리시스템 API Server
 
 본 Repo는 더이상 업데이트 되지 않습니다.  
